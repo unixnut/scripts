@@ -1,0 +1,5 @@
+#! /bin/sh
+# find_swapfiles (Bourne shell script) -- Finds any VIM swapfiles
+# Looks recursively in the current directory, or the specified directories if supplied.
+
+find "$@" -name "*.sw[^fz]" -o -name ".*.sw[^fz]"

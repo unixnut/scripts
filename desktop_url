@@ -1,0 +1,9 @@
+#!/usr/bin/awk -f
+# desktop_url (AWK script) -- extracts the name and URL from a freedesktop.org desktop file where Type=Link
+
+BEGIN { FS = "=" }
+
+
+$1 == "URL" { url = $2 }
+$1 == "Type" { type = $2 }
+$1 ~ /^Name\[/ { if (type == "Link") print( $2 " <" url ">" ); type = 0; }

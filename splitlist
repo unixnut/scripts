@@ -1,0 +1,8 @@
+#! /bin/csh -f
+# splitlist (C shell script) -- splits a list into multiple lines
+# E.g. "Product and Process Requirements; Functional and Non-functional Requirements"
+# becomes:
+#   + Product and Process Requirements
+#   + Functional and Non-functional Requirements
+
+sed -e 's/\([^;,]*\)[;, 	]*/  + \1\n/g' $*:q

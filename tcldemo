@@ -1,0 +1,12 @@
+#! /usr/bin/tclsh 
+package require Tk
+
+
+
+entry .textfield -background white
+
+frame .text
+text .t
+scrollbar .s -command {.t yview scroll}
+pack .s .t -in .text -side right -fill y
+pack .textfield .text 

@@ -1,0 +1,53 @@
+# file types
+*.pyc
+#*#
+.*.sw?
+## *.desktop
+*.old
+
+Classes/
+RCS/
+i386-linux/
+old/
+
+# old
+find_bookmark.xsl
+find_bookmarks
+find_dldocs
+flunge
+ftest
+spud
+tarbak_test*
+dds
+gxwt
+
+# personal
+ganymede
+ucc*
+mussel*
+morwong*
+
+# work
+view_invoices
+wheader
+wreceipt
+
+# random
+dowkd.pl.gz
+hammer-004031c659.desktop
+OOo.desktop
+identity.xsl
+ljstrip
+mklink
+
+# TO-DO
+utils.py
+
+# see http://al.id.au/svn/tools/
+zone
+hostinfo
+
+# overrides
+! old/yurl2vcf
+
+# other

@@ -1,0 +1,38 @@
+#! /bin/csh -f
+# show_moz_dl (C shell script) -- shows entries from the Mozilla Download Mgr
+# (doesn't show those saved in /tmp)
+# Usage: show_moz_dl [ -t | -a ] [ -i ]
+# Where...
+#  -t   show files saved in /tmp instead
+#  -i   only show files that are incomplete
+#TO-DO:  -a   show all files
+
+set self = `basename $0`
+set allowed_options = ti
+
+# process options
+eval set argv = \(`getopt -n $self -s csh +$allowed_options $*:q`\)
+if ($status != 0) exit 1        # getopt would have already reported the error
+
+set xsltproc_opts
+set transform = ~/bin/mozrecent_saved.xsl
+
+while (x$1:q != x--)
+  switch ($1)
+    case -t:
+      set transform = ~/bin/mozrecent_orphans.xsl
+      breaksw
+
+    case -i:
+      set xsltproc_opts = ($xsltproc_opts:q --param desc_checks 'NC:DownloadState = 0')
+      breaksw
+
+    case -a:
+      breaksw
+
+  endsw
+  shift       # get rid of the option (or its arg if the inner shift already got rid it)
+end
+shift       # get rid of the "--"
+
+xsltproc $xsltproc_opts:q $transform ~/.mozilla/me/downloads.rdf

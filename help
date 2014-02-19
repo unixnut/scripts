@@ -1,0 +1,12 @@
+#! /bin/csh -f
+set opt=
+switch ($1)
+  case host:
+    breaksw
+  case lsof:
+    set opt=-h
+    breaksw
+  default:
+    set opt=--help
+endsw
+$1 $opt

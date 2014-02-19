@@ -1,0 +1,2 @@
+#!/bin/sed -nf
+s/.*<title>\(.*\)<\/title>.*/\1/p

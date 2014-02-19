@@ -1,0 +1,1 @@
+awk '/^> *$/ && prev ~ /^> *$/ { next } { prev = $0; print; }' $*:q

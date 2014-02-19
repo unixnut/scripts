@@ -1,0 +1,1 @@
+dpkg --get-selections | diff /etc/doc/packages_disk1 - | less

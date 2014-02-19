@@ -1,0 +1,6 @@
+#! /bin/sh
+#  (Bourne shell script) -- 
+
+gconftool -s --type=list --list-type=string           \
+  /apps/gnome-settings/gnome-panel/history-gnome-run  \
+  "$(gconftool -g /apps/gnome-settings/gnome-panel/history-gnome-run | sed -e "s/\[$1\]/[]/" -e "s/\(,\)$1\([],]\)/\2/" -e "s/\([[,]\)$1\([],]\)/\1/")"

@@ -1,0 +1,56 @@
+#! /bin/sh
+# update_index (Bourne shell script) -- adds line(s) for downloads to the appropriate index.txt
+# Usage: update_index [ -s | <filename> <url> ] <description>
+# Where
+#     -s        accept "filename = url" on stdin instead of on the command line
+
+self=`basename $0`
+allowed_options=s
+
+# create_entry() takes a filename, a URL and a description as arguments
+function create_entry
+{
+  if [ "$3" ] ; then
+    echo "$1 <$2>	$3"
+  else
+    echo "$1 <$2>"
+  fi
+}
+
+
+# == command-line handling ==
+# process options
+set -e
+eval set -- `getopt --shell=sh -n $self +$allowed_options "$@"`
+set +e        # getopt would have already reported the error
+
+while [ x"$1" != x-- ] ; do
+  case "$1" in
+    -s) use_stdin=true ;;
+  esac
+  shift       # get rid of the option (or its arg if the inner shift already got rid it)
+done
+shift       # get rid of the "--"
+
+# process remaining args
+if [ $use_stdin ] ; then
+  # accept "filename = url" on stdin
+  read l
+  # extract the text from before and after the " = ", respectively
+  filename=${l% =*}
+  url=${l#*= }
+else
+  filename="$1"
+  url="$2"
+  shift
+  shift
+fi
+desc="$*" 
+
+# == processing ==
+# only the non-directory part of the filename is saved in the index
+basename=${filename##*/}
+
+# figure out which index.txt to append to and do so
+index=${filename%/*}/index.txt
+create_entry "$basename" "$url" "$desc" >> $index

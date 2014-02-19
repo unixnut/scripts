@@ -1,0 +1,4 @@
+#! /bin/csh -f
+# deidle (C shell script) -- strips the prompts & converts the spaces from a python session copied from Idle
+
+sed -e 's/^[>.][>.][>.] //' -e 's/^    /	/' -e 's/        /	/g' $*:q

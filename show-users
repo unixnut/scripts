@@ -1,0 +1,4 @@
+#! /bin/sh
+# show-users (Bourne shell script) -- shows all non-system users in passwd file format
+
+getent passwd|awk -F: '$3 >= 500 && $1 != "nobody"'

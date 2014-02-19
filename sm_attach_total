@@ -1,0 +1,36 @@
+#! /usr/bin/python 
+# sm_attach_total (Python script) -- print out the total size of attachments in a SquirrelMail message
+# The message text (containing zero or more attachment descriptions) is expected on stdin or
+# in a file named on the command line.
+# Each attachment description contains a size (of the file as encoded with BASE-64) consisting
+# of a number followed by either "k" or "M" (within this script, this is called a size specifier).
+# The script repeatedly scans the input, one word at a time, until a size specifier is found.  The
+# integer value of the previous word (times 1024 in the case of "M") is then added to the total.
+# At the end of the script, this total is printed to stdout.
+
+import sys
+
+if len( sys.argv ) == 1:
+	input_stream = sys.stdin
+else:
+	input_stream = file( sys.argv[1] )
+
+total = 0
+prev = 0
+
+# read and process all lines in the file
+for line in input_stream.readlines():
+  # (...one word at a time)
+	for word in line.split():
+		value = 0
+		if word == "k":
+		  value = int(prev)
+		elif word == "M":
+			value = int(prev)	 * 1024
+		
+		if value != 0:
+			total += value
+		
+		prev = word
+
+print total

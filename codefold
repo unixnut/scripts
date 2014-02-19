@@ -1,0 +1,3 @@
+#! /bin/csh -f
+# codefold (C shell script) -- removes comments & folds code onto one line
+sed -e ': wrap' -e 's@//.*@@' -e '/\/\*/ {' -e ': commentloop' -e 's@/\*.*\*/@@' -e 't loopend' -e N -e 'b commentloop' -e ': loopend' -e \} -e N -e 's/[ 	]*\n[ 	]*/ /' -e 'b wrap' $*:q

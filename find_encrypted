@@ -1,0 +1,1 @@
+find \( -name .gnupg -o -name tmp \) -prune -o -name \*.gpg -print

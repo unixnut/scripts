@@ -1,0 +1,1 @@
+find . -name \*.st\? -o -name \*.ot\?

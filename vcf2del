@@ -1,0 +1,10 @@
+#!/usr/bin/awk -f
+# vcf2del (AWK script) -- converts names and URLs into Netscape bookmarks
+
+BEGIN { FS = ":" }
+
+
+$1 == "ORG" { name = $2; }
+$1 == "URL" { url = substr( $0, 5 ); printf( "                <DT><A HREF=\"%s\">%s</A>\n", url, name ); }
+
+

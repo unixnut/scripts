@@ -1,0 +1,10 @@
+#! /bin/sed -f
+# delsubst (Sed script) -- decorates one-word links
+
+/nedbatchelder.com/ s@>\([A-Za-z][^ >]*\)\(</A>\)@>Ned Batchelder's \1 resources\2@
+/bunnyhero.org/ s@>\([A-Za-z][^ >]*\)\(</A>\)@>Wayne A. Lee's \1 resources\2@
+/ddj.com/ s@\(>[A-Za-z][^ >]*\)\(</A>\)@\1 resources # Dr. Dobb's\2@
+/devshed.com/ s@\(>[A-Za-z][^ >]*\)\(</A>\)@\1 resources # devshed.com\2@
+/thescripts.com/ s@\(>[A-Za-z][^ >]*\)\(</A>\)@\1 resources # thescripts.com\2@
+/www.devdaily.com/ s@\(>[A-Za-z][^ >]*\)\(</A>\)@\1 resources # Developer's Daily\2@
+/jroller.com/ s@\(>[A-Za-z][^ >]*\)\(</A>\)@\1 resources # jroller.com\2@

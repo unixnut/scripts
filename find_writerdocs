@@ -1,0 +1,1 @@
+find $*:q -name '*.s?w' -o -name '*.o?t'

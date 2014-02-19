@@ -1,0 +1,1 @@
+sed -e 's@//.*@@' -e '/\/\*/ {' -e ': commentloop' -e 's@/\*.*\*/@@' -e 't loopend' -e N -e 'b commentloop' -e ': loopend' -e \}

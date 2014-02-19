@@ -1,0 +1,12 @@
+#! /usr/bin/python
+# mailman_arcdump (Python script) -- converts a list of mailman archive HTML filenames into the corresponding text archive filenames
+
+import sys
+import re
+
+infile = file(sys.argv[1])
+lines = infile.readlines()
+for berk in lines:
+	if berk[0] == "/":
+		m = re.match( "(.*/[0-9].*)msg([0-9]*)", berk );
+		print "%sarctxt/%s" % (m.group( 1 ), int( m.group( 2 ) ) + 1 )

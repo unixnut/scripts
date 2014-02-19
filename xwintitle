@@ -1,0 +1,36 @@
+#! /bin/csh -f
+# xwintitle (C shell script) -- show the title of a given X window
+# TO-DO: use getopt; convert to POSIX args; disable use of $XWINTITLE_* and add a -e option to enable them
+
+set opts = ()
+set more_cmds = ()
+if (x$1:q == x-id) then
+  set opts = (-id $2)
+  shift
+  shift
+else
+  # print the the window ID and a newline, then delete it out of the pattern
+  # space and continue with the rest of the line
+  set more_cmds = (-e '/.*Window id: \([^ ]*\)/ {' -e 's//\1\\
+/' -e P -e D -e \})
+endif
+
+# Take the prefix & suffix from the relevant environment variable (if defined)
+# as long as the first (for the prefix) or second (for the suffix) command line
+# argument is empty.  Otherwise (in each case) take the prefix/suffix from the
+# command line argument, even if empty.
+if (x$1:q == x && $?XWINTITLE_PREFIX) then
+  set prefix = $XWINTITLE_PREFIX:q
+else
+  set prefix = $1:q
+endif
+if (x$2:q == x && $?XWINTITLE_SUFFIX) then
+  set suffix = $XWINTITLE_SUFFIX:q
+else
+  set suffix = $2:q
+endif
+
+# print out anything between the quotes, not including the prefix/suffix
+# (a hyphen before the suffix can't be eliminated due to greedy matching)
+# (note: backticks used in sed search command to avoid input interference)
+xwininfo $opts:q | sed -n $more_cmds:q -e 's`.*"'$prefix:q'\(.*\)'$suffix:q'"$`\1`p'

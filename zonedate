@@ -1,0 +1,6 @@
+#! /bin/sh
+# zonedate (Bourne shell script) -- prints a DNS zone file timestamp
+# Note: this will just produce the first timestamp for a given day.  For
+# subsequent ones, just increment the one in the zone file.
+
+date +'		%Y%m%d01                ; Serial'

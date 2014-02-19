@@ -1,0 +1,131 @@
+#!/bin/sh
+#
+# Julian Fitzell <jfitzell@gmail.com>
+#
+# This script expects the username, home directory, and destination maildir
+# as parameters. For example:
+#
+# migrateuser.sh jdoe /home/jdoe /maildirs/j/jdoe
+#
+# It will migrate mail from the mail spool (/var/mail/) by default and from
+# all folders in the mail/ directory in the user's home. It migrates into
+# a temporary folder and then renames it upon success (allowing, for example,
+# your mail system to check for the presence of a Maildir and falling back
+# to mbox if it is not there).
+#
+# You could run this for all users with something like the following (you
+# might want to grep out system users; I added "| grep '/home'"):
+#
+# getent passwd |(IFS=:;
+#  while read user pw id gp fname home sh; do
+#   DATE=`date`
+#   echo "---$user ($DATE)---" >&2
+#   FIRSTCHAR=`echo ${user:0:1}|tr "[:upper:]" "[:lower:]"`
+#   sudo -H -u $user /path/to/migrateuser.sh "$user" "$home" "/maildirs/$FIRSTCHAR/$user"
+#  done) >> migratuser.log.detail 2>> migrateuser.log.errors
+#
+user="$1"
+home="$2"
+dest="$3"
+
+MB2MD=/usr/local/sbin/mb2md.pl
+MB2MD_OPTS=-UK
+MAILUTIL=mailutil
+MD5SUM=md5sum
+
+INBOX=/var/mail/$user
+WORKING="${dest}.mdwork.`date +%s`"
+FOLDERS="$home/mail"
+
+inbox_hash() {
+  local HASH=`ls -l $INBOX`
+  eval "$1=\"$HASH\""
+}
+
+folders_hash() {
+  local HASH=`find $FOLDERS -type f |sort|(IFS=\
+;while read file; do ls -l "\$file"; done)`
+  eval "$1=\"$HASH\""
+}
+
+cd $home
+
+WORKING_DIR=`dirname "$WORKING"`
+if [ ! -d "$WORKING_DIR" ]; then
+  echo "$user -- ERROR: $WORKING_DIR does not exist" >&2
+  exit 1
+fi
+
+if [ -e $dest ]; then
+  echo "$user -- $dest exists... [SKIPPED]" >&2
+  exit 0
+fi
+
+# First do the INBOX
+if [ -f $INBOX ]; then
+  inbox_hash INBOX_COMP
+
+  echo -n "$user -- Migrating INBOX... " >&2
+  $MB2MD $MB2MD_OPTS -s "$INBOX" -d "$WORKING"
+
+  CHECK_OLD=`$MAILUTIL check "$INBOX" | sed 's/in.*$//' | sed -r 's/([0-9]+ unseen)//'`
+  CHECK_NEW=`$MAILUTIL check "$WORKING" | sed 's/in.*$//' | sed -r 's/([0-9]+ unseen)//'`
+
+  if [ "$CHECK_OLD" == "$CHECK_NEW" ]; then
+    echo "[OK]" >&2
+  else
+    echo "[ERROR] (mismatch during post compare)" >&2
+    echo "$user -- $CHECK_OLD" >&2
+    echo "$user -- $CHECK_NEW" >&2
+    exit 1;
+  fi
+else
+  echo "$user -- WARNING: user has no inbox in the mail spool" >&2
+fi
+
+# Then do the folders and subscriptions
+if [ -d $home/mail ]; then
+  folders_hash FOLDERS_COMP
+
+  echo -n "$user -- Migrating mail folders... " >&2
+  $MB2MD $MB2MD_OPTS -R -s "$FOLDERS" -d "$WORKING"
+  # Not sure how to verify this part...
+  echo "[DONE] (not verified)" >&2
+
+  if [ -f "$FOLDERS/.subscriptions" ]; then
+    echo -n "$user -- Migrating subscriptions... " >&2
+    cat "$FOLDERS/.subscriptions" | sed 's|/+$||' | sed 's/\./_/g' | sed 's|/|\.|g' | sort | uniq > "$WORKING/subscriptions"
+    chmod 600 "$WORKING/subscriptions"
+    echo "[OK] (`wc -l \"$WORKING/subscriptions\" | awk '{ print $1 }'`)" >&2
+  fi
+else
+  echo "$user -- WARNING: user has no mail/ folder" >&2
+fi
+
+# Now make sure nothing has changed and move the folder into place
+echo -n "$user -- Making sure originals are unmodified... " >&2
+if [[ -f $INBOX ]]; then
+  inbox_hash INBOX_COMP2
+  if [[ "$INBOX_COMP" != "$INBOX_COMP2" ]]; then
+    echo "[CHANGED] (inbox changed)" >&2
+    exit 1
+  fi
+fi
+if [[ -d $FOLDERS ]]; then
+  folders_hash FOLDERS_COMP2
+  if [[ "$FOLDERS_COMP" != "$FOLDERS_COMP2" ]]; then
+    echo "[CHANGED] (folders changed)" >&2
+    exit 1
+  fi
+fi
+echo "[OK]" >&2
+
+echo -n "$user -- Copying working directory into place... " >&2
+if [[ -d $WORKING ]]; then
+  mv "$WORKING" "$dest"
+  echo "[COMPLETE]" >&2
+else
+  echo "[N/A] (nothing to copy)" >&2
+fi
+
+

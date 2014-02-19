@@ -1,0 +1,11 @@
+#! /bin/csh -f
+# makehtml (C shell script) -- wraps text from STDIN in an HTML template
+
+set page_title = ""
+
+if ($#argv == 2 && x$1 == x-t) set page_title = $2:q
+
+sed -n -e "s/\(.*<title>\)\(.*\)/\1$page_title\2/" -e '1,/<body>/p' ~/Templates/'skeleton HTML page.html'
+cat
+echo '  </body>\
+</html>'

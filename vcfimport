@@ -1,0 +1,1 @@
+/usr/bin/kabcclient --add --input-format vcard "@"

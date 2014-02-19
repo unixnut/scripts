@@ -1,0 +1,5 @@
+#! /bin/csh -f
+# to-do (C shell script) -- uses find and grep to discover to-do markers
+# Usage:  [ <path> ]
+
+find $*:q -name RCS -prune -o -type f \( ! -name \*.\* -o -name .\* -name \*.css -o -name \*.el -o -name \*.txt -o -name \*.text -o -name \*.h++ -o -name \*.hpp -o -name \*.hh -o -name \*.c++ -o -name \*.cxx -o -name \*.cc -o -name \*.h -o -name \*.c -o -name \*.csh -o -name \*.java -o -name \*.p -o -name \*.pas -o -name \*.pl -o -name \*.pm -o -name \*.py -o -name \*.sh -o -name \*.tcl -o -name \*.tk -o -name \*.vcs -o -name \*.vcf \) -print0 | xargs -0 grep 'TO-'DO

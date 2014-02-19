@@ -1,0 +1,27 @@
+#! /usr/bin/python
+# dups (Python script) -- flag duplicated characters in a file
+
+import sys
+
+berk = file( sys.argv[1] )
+
+# read and process all lines in the file
+for line in berk.readlines():
+	# reset the previous char marker for each line
+	prev = ""
+
+	# go through all characters in the current line (including EOL char), checking
+	# each one against the previous one
+	for char in line:
+		sys.stdout.write( char )
+		if char == prev:
+			sys.stdout.write( "!!!" )
+		prev = char
+
+# note: the print statement was not used because it writes a space after each expression
+
+# account for a non-terminated last line
+if prev != "\n":
+	print
+
+berk.close()

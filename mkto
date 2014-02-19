@@ -1,0 +1,4 @@
+#! /bin/csh -f
+# mkto (C shell script) -- creates a comma-separated list of e-mail recipients
+# FIXME
+sed -n -e '/\(.*\)\t\(.*\)/ {' G -e 's//\1 <\2>, /' -e H -e \} -e '$ {' -e p -e g -e p -e \} $*:q

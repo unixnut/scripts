@@ -1,0 +1,1 @@
+find -depth 1 -type f -name .\*

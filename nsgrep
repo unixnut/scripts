@@ -1,0 +1,24 @@
+#! /bin/sh
+#  (Bourne shell script) -- query the list of domains on stdin for certain criteria
+
+[ -d tmp/registry ] || exit 3
+
+## WHOIS_PARAMS="-h whois.netregistry.net"
+
+while read d ; do
+  # cache it
+  # TO-DO: check if it's up-to-date
+  if [ ! -f tmp/registry/$d -o ! -s tmp/registry/$d ] ; then 
+    whois $WHOIS_PARAMS $d > tmp/registry/$d
+  fi
+  if [  ! -s tmp/registry/$d ] ; then
+    echo "(nothing returned for $d)"
+    continue
+  fi
+
+  if grep -q '^Name Server.*ns0.atlare.com.au' tmp/registry/$d
+  then
+    echo $d
+  fi
+  sleep 1
+done

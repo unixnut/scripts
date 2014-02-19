@@ -1,0 +1,45 @@
+#! /usr/bin/python
+# mklist (Python script) -- reformats a list and wraps it if necessary
+# Wrapping is done at the separator; i.e a list entry won't be split across
+# lines.
+
+import sys
+
+separator = " . "
+maxwidth = 60
+
+if len( sys.argv ) == 1:
+  input_stream = sys.stdin
+else:
+  input_stream = file( sys.argv[1] )
+
+strlump = ""    # string that builds up the current output line
+
+def do_output():
+  """Output the currently buffered string"""
+  
+  # the strlump-not-empty test avoids a greater-than-maxwidth entry or
+  # no-entries-found from outputting a null line
+  if strlump != "":
+    print strlump + ";"
+
+def process_entry(entry):
+  global strlump
+  # check how long the current line combined with the new entry would be
+  if len(strlump) + len(entry) + 2 > maxwidth:
+    # ...if it would be too long, dump the current line, then replace it with the entry
+    do_output()
+    strlump = entry
+  else:
+    # ...otherwise just append it and don't output anything
+    if strlump == "":
+      strlump = entry
+    else:
+      strlump = strlump + "; " + entry;
+
+for line in input_stream.readlines():
+  for entry in line.split(separator):
+    process_entry(entry)
+
+# output whatever's left in <strlump>
+do_output()

@@ -1,0 +1,108 @@
+#!/usr/bin/awk -f
+# Written by Michal Kosmulski <mkosmul _at_ users _dot_ sourceforge _dot_ net>
+# This script is hereby put in the public domain.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO
+# EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# Usage:
+# replace-file-fragments template=template_file content_file > output_file
+#
+# Replace fragments of one file with corresponding fragments from a template
+# file. Parts to be replaced are marked with special tags. The tags used
+# by default are in form of HTML/XML comments, as one typical use is
+# editing HTML files. Some parts of the file are the content and vary from
+# file to file, while others, e.g. menus and page footers, are the same
+# in many documents and can be updated with this script whenever the template
+# changes. Of course, this can be much easier achieved using SSI; However,
+# sometimes SSI is not available.
+#
+# The meaning of default tags is as follows: Each tag is a HTML comment and
+# should start the line it is in. All text after the tag, up to the end of
+# line is ignored. Text located between <!--REPLACE--> and <!--ENDREPLACE-->
+# tags in the content file is replaced by the corresponding block of text
+# located between <!--COPY--> and <!--ENDCOPY--> in the template file.
+# Lines not located between REPLACE and ENDREPLACE tags in content file
+# are copied verbatim to standard output, unless they start with <!--IGNORE-->
+# (such lines are ignored when they appear in either file).
+#
+# Example:
+#
+# --- template file ---
+# Some text
+# <!--COPY-->
+# Menu
+# <!-- IGNORE --> This line is ignored
+# <!--ENDCOPY-->
+# Something
+#
+# --- and content file ---
+# Text
+# <!--IGNORE This line is also ignored -->
+# <!--REPLACE-->
+# The menu will be inserted here
+# <!--ENDREPLACE-->
+# Page content
+#
+# --- result in the following output ---
+# Text
+# <!--REPLACE-->
+# Menu
+# <!--ENDREPLACE-->
+# Page content
+#
+# REPLACE tags are copied to output as to allow processing the result over
+# and over again, should the template change.
+
+BEGIN {
+	ignore_regex="^[[:space:]]*<!--[[:space:]]*IGNORE"
+	copy_regex="^[[:space:]]*<!--[[:space:]]*COPY"
+	endcopy_regex="^[[:space:]]*<!--[[:space:]]*ENDCOPY"
+	replace_regex="^[[:space:]]*<!--[[:space:]]*REPLACE"
+	endreplace_regex="^[[:space:]]*<!--[[:space:]]*ENDREPLACE"
+	replacing=0
+}
+
+$0~ignore_regex{next}
+$0~replace_regex {
+	print
+	replacing=1
+	# Read template line by line until the replacement for current
+	# REPLACE block is found
+	copying=0
+	while(1) {
+		getline < template
+		if ($0~copy_regex) {
+			copying=1
+		} else if ($0~endcopy_regex) {
+			copying=0
+			break
+		} else {
+			if (copying && !($0~ignore_regex)) {
+				print
+			}
+		}
+	}
+	next
+}
+$0~endreplace_regex {
+	print
+	replacing=0
+	next
+}
+
+{
+	if (replacing) {
+		next
+	}
+	print	
+}
+

@@ -1,0 +1,4 @@
+find #! /bin/csh -f
+# find_grep (C Shell script) -- finds files matching a given regexp
+
+find $*:q -type f $find_predicates -print0 | xargs -0 grep $grep_opts $regexp

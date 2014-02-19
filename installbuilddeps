@@ -1,0 +1,2 @@
+#! /bin/csh
+sudo apt-get install `dpkg-checkbuilddeps |& sed -e 's/^dpkg-checkbuilddeps: Unmet build dependencies: //' -e 's/([^)]*) //g' -e 's/\( | [+a-z0-9-]*\)*//g'`

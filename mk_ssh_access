@@ -1,0 +1,19 @@
+#! /bin/csh -f
+# mk_ssh_access (C shell script) -- creates a tar file containing SSH authorized_keys file
+
+# check input
+if ("x$1" !~ *.pub) then
+  sh -c 'echo mk_ssh_access: first argument must be a public key file 1>&2'
+  exit 1
+endif
+
+# create a temporary directory and copy the public key file
+set dest = /tmp/$$
+mkdir -p $dest/.ssh
+cp $1:q $dest/.ssh/authorized_keys
+chmod 600 $dest/.ssh/authorized_keys
+
+# create the archive
+set archive_file = "$cwd:q/${USER}_ssh_access.tar"
+cd $dest
+tar cf $archive_file:q .ssh

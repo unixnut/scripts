@@ -1,0 +1,17 @@
+#! /usr/bin/python
+# renfiles (Python script) -- rename all numerically-named text files in the current directory
+#                            so as to make the number in each name larger by a value of 33 (for example).
+
+import os;
+
+incr = 1            # value to increment the number in each name by
+
+files = os.listdir( "." )
+for file_name in files:
+	# operate on all the numerically-named text files
+	if file_name[0].isdigit() and file_name.find( ".txt" ) != -1:
+		# find the number part of the name string
+		num_part = file_name.split( "." )[0]
+		new_name = "%02d.txt" % (int( num_part ) + incr)
+		os.rename( file_name, new_name )
+		print file_name, "renamed to", new_name

@@ -1,0 +1,1 @@
+find "$@" -name '[a-df-wyz]-*' -o -name '[a-z][a-z]-*.'

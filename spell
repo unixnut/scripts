@@ -1,0 +1,18 @@
+#! /bin/csh -f
+# spell (C shell script) -- runs one or more files through ispell and displays mismatches
+# Usage: spell [ -u ] [ <filename> ... ]
+# Where -u causes only one instance of each misspellings to be reported
+
+set ispell_flags
+set output_pipe
+if ("x$1" == x-u) then
+  set output_pipe = " | uniq"
+  shift
+endif
+
+if ("$1" == "") then
+  # handle standard input
+  ispell -l $ispell_flags $output_pipe
+else
+  cat $*:q | ispell -l $ispell_flags $output_pipe
+endif

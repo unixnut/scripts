@@ -1,0 +1,7 @@
+#! /usr/bin/python
+# snackdemo (Python script) -- asks the user a question with a dialog box
+
+import snack
+screen = snack.SnackScreen() 
+berk = snack.ButtonChoiceWindow( screen, "example", "moo" )
+screen.finish()

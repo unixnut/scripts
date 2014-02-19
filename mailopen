@@ -1,0 +1,4 @@
+#! /bin/csh -f
+# mailopen (C shell script) -- opens an e-mail message using KMail
+
+/usr/bin/kmail --view $*:q

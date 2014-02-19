@@ -1,0 +1,5 @@
+#! /bin/csh -f
+# mkhtml (C shell script) -- converts indentation (and lack thereof) to heading levels
+# TO-DO: convert to sed script
+
+sed -e '1,/^$/d' -e 's/ *(.*)//' -e 's/^[^ ].*/<h1>&<\/h1>/' -e 's/ *(.*)//' -e 's/      \(.*\)/<h4>\1<\/h4>/' -e 's/ *(.*)//' -e 's/    \(.*\)/<h3>\1<\/h3>/' -e 's/ *(.*)//' -e 's/  \(.*\)/<h2>\1<\/h2>/'

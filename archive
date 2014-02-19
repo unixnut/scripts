@@ -1,0 +1,10 @@
+#! /bin/sh
+# /usr/local/bin/archive (Bourne shell script) -- renames a file based on its modification date 
+
+if [ -z "$1" ] ; then
+  echo "archive: no file specified" >&2
+  exit 1
+fi
+
+date=$(date +%F -r "$1")
+mv "$1" "$1".$date

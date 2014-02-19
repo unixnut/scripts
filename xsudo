@@ -1,0 +1,2 @@
+#! /bin/csh -f
+sudo sh -c "XAUTHORITY=$HOME/.Xauthority $*:q"

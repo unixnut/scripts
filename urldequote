@@ -1,0 +1,97 @@
+#! /usr/bin/python
+'''urldequote (Python script) -- replace RFC 1738 quoted entities with their
+                                 actual values in the arguments and echo them
+Keywords: web RFC1738 URI url cgi-bin filename
+Version: 1.1
+
+Options:
+  -g          convert a wrapped URL from Google search results to the real thing
+  -l          convert a wrapped URL from LinkedIn to the real thing
+  -f          remove file:// prefix
+  -m          remove mailto: prefix (and extract subject, if present)
+  -y          convert a wrapped e-mail addr from Yahoo! Mail to the real thing
+
+TO-DO: barf properly on invalid options
+TO-DO: -u for replacing underscores
+'''
+
+import sys
+import getopt
+import urllib
+import re
+
+
+# == initialisation ==
+# handle command line options
+optlist, args = getopt.getopt( sys.argv[1:], 'gfmly' )
+params = {}
+for option, opt_arg in optlist:
+    if option == "-g":
+        params["degoogle"] = True
+    if option == "-l":
+        params["deli"] = True
+    if option == "-f":
+        params["strip_file_proto"] = True
+    if option == "-m":
+        params["strip_mailto_proto"] = True
+    if option == "-y":
+        params["deyahoo"] = True
+
+# if there are no arguments, assume the user wants to process standard input
+if len( args ) == 0:
+    args = ("-",)
+
+# go through the argument list
+for name in args:
+    if name == "-":
+        urls = sys.stdin.readlines()
+    else:
+        urls = (name,)
+
+    for wrapped_url in urls:
+        extra_info = []
+        if params.get("degoogle"):
+            # match the supplied URL against a regex
+            m = re.match( ".*&url=([^&]*).*", wrapped_url )
+            assert m != None, "%s did not match the regex!" % wrapped_url
+            url = urllib.unquote_plus( m.group( 1 ) )     # extract the substring
+        elif params.get("deli"):
+            # try to remove the outer layer of wrapping
+            m = re.match( r'.*/nus-trk\?.*url=([^&]*).*', wrapped_url )
+            if m != None:
+                wrapped_url = urllib.unquote_plus( m.group( 1 ) )     # extract the substring
+            # match the supplied URL against a regex
+            m = re.match( r'.*(share\?.*|redirect\?)url=([^&]*).*', wrapped_url )
+            assert m != None, "%s did not match the LinkedIn share/redirect regex!" % wrapped_url
+            url = urllib.unquote_plus( m.group( 2 ) )     # extract the substring
+        elif params.get("deyahoo"):
+            # match the supplied URL against a regex
+            m = re.match( ".*compose\?to=([^&]*).*", wrapped_url )
+            assert m != None, "%s did not match the regex!" % wrapped_url
+            url = urllib.unquote_plus( m.group( 1 ) )     # extract the substring
+        else:
+            url = urllib.unquote_plus( wrapped_url )
+        
+        if params.get("strip_file_proto"): url = re.sub( "^file://", "", url )
+        if params.get("strip_mailto_proto"):
+            # match the supplied e-mail addr against a regex
+            m = re.match( "^mailto:([^?]*)(.*)", url )
+            if not m: raise Exception("url didn't match mailto: pattern")
+            url = m.group(1)      # addr
+            paramstr = m.group(2)     # subject, etc. (if supplied)
+            # split up the URL parameters because neither 'urllib' nor 'urlparse' can do this for mailto: URLs
+            # FIXME: split into a function and reorder so that this is done before unquoting
+            if paramstr != "":
+                # remove the question mark and operate on the pairs (separated by equals signs)
+                for param_pair in paramstr[1:].split("&"):
+                    wrapped_url, value = param_pair.split( "=" )
+                    if wrapped_url == "subject":
+                        extra_info.append( ("Subject", value) )
+                    else:
+                        extra_info.append( (wrapped_url, value) )
+
+        # Actually print the modified URL, followed by an indented list of extra info (if any)
+        print url
+        for kw, data in extra_info:
+            print "  " + kw + ":", data
+# http://www.enewslettersonline.com/SrvENManager?c_go=y&c_id=5748&s_id=157220&si_id=404&memberid=1434320&url=http://www.icticc.org.au

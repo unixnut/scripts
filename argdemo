@@ -1,0 +1,9 @@
+#! /usr/bin/python
+# argdemo (Python script) -- a demo program that processes and print arguments
+
+import sys
+args = iter( sys.argv[1:] );
+for berk in args:
+	print berk
+	if berk == "n":
+		print "...", args.next()

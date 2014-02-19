@@ -1,0 +1,4 @@
+wget -b -nd -c --limit-rate=35k -P Downloads/Linux/ http://mirror.waia.asn.au/pub/linux/ubuntu-releases/11.04/ubuntu-11.04-desktop-i386.iso
+## http://mirror.internode.on.net/pub/debian-cd/5.0.6/i386/iso-cd/debian-506-i386-CD-1.iso 
+## http://mirror.internode.on.net/pub/debian-cd/5.0.6/i386/iso-cd/debian-506-i386-CD-2.iso
+## ftp://ftp.ii.net/linux/debian/debian-cd/4.0_r0/i386/iso-cd/debian-40r0-i386-CD-1.iso ftp://ftp.ii.net/linux/debian/debian-cd/4.0_r0/i386/iso-cd/debian-40r0-i386-CD-2.iso ftp://ftp.ii.net/linux/debian/debian-cd/4.0_r0/i386/iso-cd/debian-40r0-i386-CD-3.iso

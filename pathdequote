@@ -1,0 +1,10 @@
+#! /usr/bin/python
+# pathdequote (Python script) -- replace RFC 1738 quoted entities with their
+#                                actual values in the argments and echo them
+# Keywords: web RFC1738 URI url cgi-binfilename
+
+import sys
+import urllib
+
+for name in sys.argv[1:]:
+	print urllib.unquote_plus( name )

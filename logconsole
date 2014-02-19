@@ -1,0 +1,10 @@
+#! /bin/sh
+# logconsole (Bourne shell script) -- monitors certain syslog activity 
+# (Note: this only includes messages specified in /etc/syslog.conf; under
+# Sarge, this doesn't include emergency messages)
+
+# throw away existing text in the pipe so that the window starts empty
+cat /dev/xconsole > /dev/null
+
+# start the window as an icon
+xconsole -iconic -file /dev/xconsole

@@ -1,0 +1,21 @@
+#! /bin/csh -f
+# rotate (C shell script) -- advances the version extensions of a file series
+
+if ("`sh -c 'echo $1.[0-9]*'`" == "$1.[0-9]*") then
+  if (-e $1.old) mv $1.old $1.1
+else
+  set files = ($1.[0-9])
+  if (-e $1.10) then
+    set files = ($1.[0-9][0-9])
+  endif
+  set index = $#files
+  while ($index > 0)
+    @ new_ext = $files[$index]:e + 1
+    mv $files[$index] $1.$new_ext
+    @ index--
+  end
+endif
+
+if (-e $1) then
+  mv $1 $1.0
+endif
