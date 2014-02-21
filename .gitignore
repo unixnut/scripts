@@ -39,6 +39,9 @@ OOo.desktop
 identity.xsl
 ljstrip
 mklink
+mkrel
+netscape
+hashpw.py
 
 # TO-DO
 utils.py
