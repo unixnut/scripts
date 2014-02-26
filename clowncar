@@ -1,0 +1,75 @@
+#! /bin/bash
+# clowncar (BASH script) -- wrapper for useradd that manages SSH public key
+
+self=clowncar
+
+GRACE_PERIOD=3
+USERADD=/usr/sbin/useradd
+
+if [ x"$1" = x-O ] ; then
+  echo "${self}: Script output not supported yet" >&2
+  exit 2
+
+  shift
+fi
+
+if [ $# -lt 1 ] ; then
+  echo "${self}: username (and other useradd arguments) required" >&2
+  exit 1
+fi
+
+set -e
+
+username="${@: -1}"
+# ... in sh, use "eval last=\${$#}" or "for username; do : ; done" instead of the previous line
+
+# TO-DO: test for valid username
+
+if getent passwd $username > /dev/null
+then
+  echo "Notice: User $username already exists."
+else
+  echo "Creating user $username."
+  $USERADD "$@"
+  # delete the user's password and mark it as expired
+  passwd -d $username
+  ## passwd -e $username
+  chage -d 0 $username
+
+  # TO-DO: auto-expire the user after 3 days
+  ## chage --inactive $GRACE_PERIOD $username
+fi
+
+homedir=$(getent passwd $username | cut -f6 -d:)
+
+if [ ! -d $homedir ] ; then
+  echo "Error: User $username's home directory doesn't exist"
+  exit 3
+fi
+
+# Only prompt if running on a terminal
+if [ -t 0 ] ; then
+  echo "Please paste in the desired SSH key (including command-forcing):"
+fi
+read ssh_key
+
+install_it=y
+if [ -f $homedir/.ssh/authorized_keys ] ; then
+  if grep -q "$ssh_key" $homedir/.ssh/authorized_keys
+  then
+    echo "Notice: User's key is already installed"
+    install_it=n
+  fi
+else
+  # Create an empty authorized_keys file (and the directory if needed) with the
+  # correct ownership and permissions
+  if [ ! -d $homedir/.ssh ] ; then
+    install -o $username -g $username -d $homedir/.ssh
+  fi
+  install -o $username -g $username -m 600 /dev/null $homedir/.ssh/authorized_keys
+fi
+
+if [ $install_it = y ] ; then
+  echo "Installing key"
+  echo "$ssh_key" >> $homedir/.ssh/authorized_keys
+fi
