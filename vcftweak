@@ -1,0 +1,7 @@
+#! /bin/sh
+# vcftweak (Bourne shell script) -- strips the quoting out of a .vcf file and sends to stdout
+#
+# TO-DO: 
+
+sed -e 's/$//g' -e 's/\\n/\\\
+/g' -e 's/\\\([,:]\)/\1/g' -e 's/\\t/	/g' "$@"

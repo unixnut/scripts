@@ -1,0 +1,22 @@
+#! /bin/sh
+# commit (Bourne shell script) -- revision control swiss army knife
+
+set -e
+
+if [ -n "$1" ] ; then
+  cd "$1"
+fi
+
+if [ -d .git ] ; then
+  git add -A
+  git commit
+  git push
+elif [ -d .svn ] ; then
+  # svn supports permanent adds so assume that it has been done
+  ## svn add *
+  svn ci
+else
+  echo "commit: no revision control directory found"
+fi
+ 
+

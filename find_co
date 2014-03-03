@@ -1,0 +1,6 @@
+find $1 -name "*.el" | while read file ; do
+archive=${file%/*}/RCS/${file##*/}
+  if [[ -f $archive && -w $file ]] ; then
+  echo $file
+  fi
+done

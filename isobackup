@@ -1,0 +1,86 @@
+#! /bin/csh -f
+# isobackup (C shell script) -- does full/incremental backups to CD
+# specialised for betelgeuse.
+# Usage: isobackup [ <ID number of previous backup> ]
+#   If the argument is not supplied, a full backup (with ID 0) is performed
+
+cd /
+
+set opts
+
+# check that there are args and that the last one is not a switch, then assign it to prev_id
+# (this is actually a hack to avoid having to mount the CD-R and determine the value automatically)
+# TO-DO: use a getopt utility instead
+if ($#argv > 0 && x$argv[$#argv] !~ x-*) then
+  # specify the old root so that an incremental backup can be done:
+  set prev_id=$argv[$#argv]
+  set old_root_opts="-old-root backup/betelgeuse/$prev_id"
+
+  # determine the root's final subdirectory name:
+  @ this_id = $prev_id + 1
+else
+  # non-incremental backup, so fake the option:
+  set old_root_opts
+  @ this_id = 0
+endif
+
+set isofile=/space/backup/backup`date +%Y-%m-%d`.iso
+
+# make a time stamp
+touch ~/.backup_done
+
+echo isobackup: getting multisession info...
+set msinfo=`cdrecord -msinfo dev=ATAPI:0,0,0`
+if ("$msinfo" != "") then
+  echo '...merging previous session.\
+'
+  set multisession_opts="-C $msinfo -M ATAPI:0,0,0"
+else
+  echo '...starting new disk.\
+'
+  set multisession_opts
+endif
+
+
+# Create an image, doing the following:
+#  + merge: read the current disk to allow multisession
+#  + enable Rock Ridge extensions (-r)
+#  + generate Joliet directory records
+#  + use graft points to specify a container directory for the contents
+#    of each directory that is being written (otherwise their files and
+#    subdirectories would all be mashed together under the root)
+# Then burn the image if it was created successfully.
+mkisofs -o $isofile -V "`date`"  -no-bak  -r -J  $multisession_opts $opts \
+        -root backup/betelgeuse/$this_id $old_root_opts \
+        -x /home/fun -x /home/other  \
+        -x '/home/*/.mozilla/*/*/Cache*' -x '/home/*/.mozilla/*/*/XUL.mfasl' \
+        -x '/home/*/.gnome2/epiphany/mozilla/epiphany/Cache' -x '/home/*/.java/deployment/cache' \
+        -x '/home/*/.nautilus/metafiles' \
+        -graft-points \
+        etc=/etc home=/home && \
+  cdrecord -tao -multi dev=ATAPI:0,0,0 speed=8 $isofile
+        
+
+##      -publisher publisher_id -p preparer_id -sysid ID -A application_id -copyright FILE -biblio FILE -abstract FILE 
+# .mkisofsrc  PUBL=           PREP=              SYSI= APPI=                     COPY=       BIBLO=          ABST=       
+
+# old:
+# -file-mode 444        specify a file mode 
+# -l                    Allow full 31 character ISO9660 filenames (legal)
+
+# multisession
+## -M ATAPI:0,0,0 dev=ATAPI:0,0,0
+# or?
+## cdrecord -msinfo |  | cdrecord -waiti
+# multisession backups
+##  
+
+
+
+
+## cdblocks=` mkisofs -print-size -quiet ... ` mkisofs ... | cdrecord ... tsize=${cdblocks}s -
+## 
+
+# other cdrecord options
+## driveropts=burnfree 
+## -overburn

@@ -1,0 +1,4 @@
+#! /bin/csh -f
+# find_folders (C shell script) -- finds all mbox files in or under $CWD
+
+find . -type d ! -name . \( -name .\* -o -name bin \) -prune -o ! -perm -+x -type f ! -name ".*" ! -name "*.*" -size +1 -print
