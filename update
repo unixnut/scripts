@@ -1,7 +1,7 @@
 #! /bin/sh
-# commit (Bourne shell script) -- revision control swiss army knife
+# update (Bourne shell script) -- revision control swiss army knife
 #
-# TO-DO: pass git options
+# TO-DO: pass git options?
 
 SELF=$(basename "$0")
 
@@ -10,13 +10,9 @@ fn()
   set -e
 
   if [ -d .git ] ; then
-    git add -A
-    git commit
-    git push
+    git pull
   elif [ -d .svn ] ; then
-    # svn supports permanent adds so assume that it has been done
-    ## svn add *
-    svn ci
+    svn update
   else
     echo "$SELF: WARNING: no revision control directory found in $PWD" >&2
   fi
