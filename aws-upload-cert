@@ -1,0 +1,66 @@
+#! /bin/sh
+# aws-upload-cert (Bourne shell script) -- "aws iam upload-server-certificate" wrapper
+
+self=`basename $0`
+allowed_options=n:
+
+# == command-line handling ==
+# process options
+set -e
+eval set -- `getopt --shell=sh -n $self +$allowed_options "$@"`
+set +e        # getopt would have already reported the error
+
+while [ x"$1" != x-- ] ; do
+  case "$1" in
+    -n) name="$2" ;;
+  esac
+  shift       # get rid of the option (or its arg if the inner shift already got rid it)
+done
+shift       # get rid of the "--"
+
+# sanity checking
+if [ $# != 2 -a $# != 3 ] ; then
+  echo "Usage: aws-upload-cert <certfile> <keyfile> [ <chainfile> ]" >&2
+  exit 1
+fi
+
+# process remaining args
+certfile="$1"
+keyfile="$2"
+chainfile="$3"
+
+# == preparation ==
+if [ ! -r "$certfile" ] ; then
+  echo "${self}: certificate file '$certfile' not found (or not readable)" >&2
+  exit 2
+fi
+if [ ! -r "$keyfile" ] ; then
+  echo "${self}: key file '$keyfile' not found (or not readable)" >&2
+  exit 2
+fi
+if [ -n "$chainfile" -a ! -r "$chainfile" ] ; then
+  echo "${self}: certificate chain file '$chainfile' not found (or not readable)" >&2
+  exit 2
+fi
+
+# If the user didn't supply a name, generate it from the certfile name
+if [ -z "$name" ] ; then 
+  certfile_basename="${certfile##*/}"
+  # chops the extension (assumes there is one)
+  name="${certfile_basename%.*}"
+fi
+
+# == processing ==
+# Upload the data from the files
+# (Note that the keyfile is output by openssl to ensure that the
+# "BEGIN RSA PRIVATE KEY" PEM subformat is used.)
+if [ -n "$chainfile" ] ; then
+  aws iam upload-server-certificate --server-certificate-name="$name" \
+    --certificate-body="$(cat "$certfile")" \
+    --private-key="$(openssl rsa -in "$keyfile" 2>/dev/null)" \
+    --certificate-chain="$(cat "$chainfile")"
+else
+  aws iam upload-server-certificate --server-certificate-name=$name \
+    --certificate-body="$(cat "$certfile")" \
+    --private-key="$(openssl rsa -in "$keyfile" 2>/dev/null)"
+fi

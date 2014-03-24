@@ -1,0 +1,29 @@
+#! /bin/sh
+# recover_swapfiles (Bourne shell script) -- reads a list of swapfile names on STDIN and asks about each one
+
+if [ $# = 0 ] ; then
+  echo "recover_swapfiles: Supply name of file to read swapfile names from" >&2
+  exit 1
+fi
+while read s <&6
+do
+  filename_maybe=${s%.*}
+  if [ -f "$filename_maybe" ] ; then
+    filename=$filename_maybe
+  else
+    d=$(dirname "$filename_maybe")
+    # swapfile without extension or path
+    tmp=${filename_maybe##*/}
+    f_b=${tmp#.}
+    filename="$d/$f_b"
+  fi
+  ## if [ -f "$filename" ] ; then echo "$filename" ; fi
+  if [ ! -f "$filename" ] ; then
+    vim -r "$filename"
+  fi
+  echo -n "deleting $s (press ^D to skip)..."
+  if read foo
+  then
+    rm "$s"
+  fi
+done 6< "$1"
