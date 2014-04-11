@@ -1,0 +1,43 @@
+#! /bin/sh
+# pem-foreach (Bourne shell script) -- run openssl on each cert in a .pem file
+
+OUTDIR=/tmp/pem-$$
+
+set -e
+
+mkdir $OUTDIR
+echo $OUTDIR >&2
+
+# open a given file (if supplied) as stdin
+if [ $# -gt 0 ] ; then
+  if [ "x$1" != x- -a "x$1" != x-- ] ; then
+    # it's a filename
+    exec < "$1"
+  fi
+  shift
+  if [ "x$1" = x-- ] ; then
+    # this accounts for the case where a filename or - was present before the --
+    # (if not, the -- was already removed above)
+    shift
+  fi
+fi
+
+
+count=0
+while read line
+do
+  if [ "$line" = "-----BEGIN CERTIFICATE-----" ] ; then
+    # switch output filenames
+    count=$(expr $count + 1)
+    filename=$OUTDIR/$count.crt
+    exec 5> $filename
+  fi
+  echo "$line" >&5
+  # if the cert is finished and any command line arguments were present other
+  # than a filename, invoke OpenSSL on the cert
+  if [ $# -gt 0 -a "$line" = "-----END CERTIFICATE-----" ] ; then
+    # close the file
+    exec 5> /dev/null
+    openssl x509 "$@" -noout -in $filename
+  fi
+done

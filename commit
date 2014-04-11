@@ -2,8 +2,10 @@
 # commit (Bourne shell script) -- revision control swiss army knife
 #
 # TO-DO: pass git options
+# TO-DO: support partial commits, i.e. don't run "git add -A"; instead, run "git status" then ask to continue
 
 SELF=$(basename "$0")
+
 
 fn()
 {

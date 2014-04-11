@@ -4,8 +4,10 @@
 self=`basename $0`
 allowed_options=n:
 
-# == command-line handling ==
-# process options
+
+# *** MAINLINE ***
+# == command-line parsing ==
+# -- option handling --
 set -e
 eval set -- `getopt --shell=sh -n $self +$allowed_options "$@"`
 set +e        # getopt would have already reported the error
@@ -18,18 +20,18 @@ while [ x"$1" != x-- ] ; do
 done
 shift       # get rid of the "--"
 
-# sanity checking
+# -- argument checking --
 if [ $# != 2 -a $# != 3 ] ; then
   echo "Usage: aws-upload-cert <certfile> <keyfile> [ <chainfile> ]" >&2
   exit 1
 fi
 
-# process remaining args
+# -- argument handling --
 certfile="$1"
 keyfile="$2"
 chainfile="$3"
 
-# == preparation ==
+# == sanity checking ==
 if [ ! -r "$certfile" ] ; then
   echo "${self}: certificate file '$certfile' not found (or not readable)" >&2
   exit 2
@@ -43,6 +45,7 @@ if [ -n "$chainfile" -a ! -r "$chainfile" ] ; then
   exit 2
 fi
 
+# == preparation ==
 # If the user didn't supply a name, generate it from the certfile name
 if [ -z "$name" ] ; then 
   certfile_basename="${certfile##*/}"

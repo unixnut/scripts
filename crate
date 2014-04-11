@@ -1,0 +1,78 @@
+#! /usr/bin/python
+# Usage: crate <from> <to> <api_key>
+#
+# Uses the API at http://currency-api.appspot.com to get a currency
+# comparison rate between the two currency codes specified, e.g.
+#   crate HKD NZD kkkkkkkkkk
+# This will show how many NZD you wil get for 1 HKD.
+#
+# (kkkkkkkkkk should be replaced with your API key, which you can get from the
+# website)
+#
+# Note that this script doesn't do conversions because the rates are only
+# updated daily and one fetch per conversion would be inefficient.
+
+import sys
+import urllib
+import json
+
+program_name = "hashpw"
+
+def help():
+    print >>sys.stderr, "Usage: crate <from> <to> <api_key>"
+
+
+# *** MAINLINE ***
+# == initialisation ==
+settings = {}
+
+# == Command-line parsing ==
+import getopt
+
+# -- defaults --
+settings['quiet'] = False
+
+# -- option handling --
+try:
+    (opts, args) = getopt.getopt(sys.argv[1:], "qh", ['help'])
+except getopt.GetoptError, e:
+    print >> sys.stderr, program_name + ":", e
+    sys.exit(1)
+
+for optpair in opts:
+    if optpair[0] == "-q":
+        settings['quiet'] = True
+    elif optpair[0] == "--help" or optpair[0] == "-h":
+        help()
+        sys.exit(0)
+
+# -- pre-preparation --
+if len(args) != 3:
+    help()
+    sys.exit(1)
+
+# -- argument handling --
+c_from = args[0]
+c_to   = args[1]
+api_key = args[2]
+
+# == preparation ==
+
+# == sanity checking ==
+
+# == processing ==
+url = "http://currency-api.appspot.com/api/%s/%s.json?key=%s" % (c_from, c_to, api_key)
+
+url = urllib.urlopen(url)
+result = url.read()
+url.close()
+## print result
+## exit(99)
+
+decoded_result = json.loads(result)
+
+if decoded_result['success']:
+    if settings['quiet']:
+        print decoded_result['rate']
+    else:
+        print "1 %s is worth %f %s" % (c_from, decoded_result['rate'], c_to)

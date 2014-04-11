@@ -6,13 +6,27 @@ self=clowncar
 GRACE_PERIOD=3
 USERADD=/usr/sbin/useradd
 
-if [ x"$1" = x-O ] ; then
-  echo "${self}: Script output not supported yet" >&2
-  exit 2
+
+# *** MAINLINE ***
+# == command-line parsing ==
+# -- defaults --
+locked=n
+
+# -- option handling --
+# this is handled strangely because the rest of the arguments are passed to
+# useradd
+while [ x"$1" = x-L -o x"$1" = x-O ] ; do
+  if [ x"$1" = x-O ] ; then
+    echo "${self}: Script output not supported yet" >&2
+    exit 2
+  elif [ x"$1" = x-L ] ; then
+    locked=y
+  fi
 
   shift
-fi
+done
 
+# -- argument checking --
 if [ $# -lt 1 ] ; then
   echo "${self}: username (and other useradd arguments) required" >&2
   exit 1
@@ -20,24 +34,29 @@ fi
 
 set -e
 
+# -- argument handling --
 username="${@: -1}"
 # ... in sh, use "eval last=\${$#}" or "for username; do : ; done" instead of the previous line
 
+# == sanity checking ==
 # TO-DO: test for valid username
 
+# == processing ==
 if getent passwd $username > /dev/null
 then
   echo "Notice: User $username already exists."
 else
   echo "Creating user $username."
   $USERADD "$@"
-  # delete the user's password and mark it as expired
-  passwd -d $username
-  ## passwd -e $username
-  chage -d 0 $username
+  if [ ! $locked = y ] ; then
+    # delete the user's password and mark it as expired
+    passwd -d $username
+    ## passwd -e $username
+    chage -d 0 $username
 
-  # TO-DO: auto-expire the user after 3 days
-  ## chage --inactive $GRACE_PERIOD $username
+    # TO-DO: auto-expire the user after 3 days
+    ## chage --inactive $GRACE_PERIOD $username
+  fi
 fi
 
 homedir=$(getent passwd $username | cut -f6 -d:)
