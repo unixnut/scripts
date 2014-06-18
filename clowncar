@@ -1,14 +1,53 @@
 #! /bin/bash
 # clowncar (BASH script) -- wrapper for useradd that manages SSH public key
 
-self=clowncar
+self=$0
+## ... clowncar
 
 GRACE_PERIOD=3
 USERADD=/usr/sbin/useradd
 
 
-append_to_file()
+# creates a version of this script that acts similarly, but has the parameters
+# and SSH key "baked in"
+clowncar_factory()
 {
+  set_ssh_key
+
+  # wrap args in single quotes.  For each existing single quote within an arg,
+  #   1) end quoting
+  #   2) inserted a backslash-quoted single quote
+  #   3) restart quoting
+  # Note that the first argument doesn't have a single quote added, because
+  # that's done by the concatenation of subsequent arguments.
+  args="'${1//\'/\'\\\'\'}"
+  shift
+
+  for arg ; do
+    args="$args' '${arg//\'/\'\\\'\'}"
+  done
+
+  # add the final argument's single quote
+  args="$args'"
+
+  # splice all info currently held into the output
+  sed -e "s/^set_ssh_key$/ssh_key='$ssh_key'/" \
+      -e "2 s/clowncar/clowncar_$username/" \
+      -e "/^# -- defaults --/,/^# -- end defaults --/ c\
+locked=$locked\n\
+username=$username\n\
+set $args" \
+    $self > "$output_filename"
+}
+
+
+set_ssh_key()
+{
+  # Only prompt if running on a terminal
+  if [ -t 0 ] ; then
+    echo "Please paste in the desired SSH key (including command-forcing):"
+  fi
+  read ssh_key
 }
 
 
@@ -16,15 +55,14 @@ append_to_file()
 # == command-line parsing ==
 # -- defaults --
 locked=n
-queue=
+# -- end defaults --
 
 # -- option handling --
 # this is handled strangely because the rest of the arguments are passed to
 # useradd
 while [ x"$1" = x-L -o x"$1" = x-O ] ; do
   if [ x"$1" = x-O ] ; then
-    outfile="$2"
-    queue=append_to_file
+    output_filename="$2"
     shift   # get rid of the option; argument gets done below
   elif [ x"$1" = x-L ] ; then
     locked=y
@@ -44,6 +82,13 @@ set -e
 # -- argument handling --
 username="${@: -1}"
 # ... in sh, use "eval last=\${$#}" or "for username; do : ; done" instead of the previous line
+
+# == preparation ==
+if [ -n "$output_filename" ] ; then
+  # mode switch!
+  clowncar_factory "$@"
+  exit $?
+fi
 
 # == sanity checking ==
 # TO-DO: test for valid username
@@ -73,11 +118,7 @@ if [ ! -d $homedir ] ; then
   exit 3
 fi
 
-# Only prompt if running on a terminal
-if [ -t 0 ] ; then
-  echo "Please paste in the desired SSH key (including command-forcing):"
-fi
-read ssh_key
+set_ssh_key
 
 install_it=y
 if [ -f $homedir/.ssh/authorized_keys ] ; then
