@@ -19,6 +19,7 @@ while [ x"$1" = x-L -o x"$1" = x-O ] ; do
   if [ x"$1" = x-O ] ; then
     echo "${self}: Script output not supported yet" >&2
     exit 2
+    shift   # get rid of the option; argument gets done below
   elif [ x"$1" = x-L ] ; then
     locked=y
   fi
@@ -54,8 +55,8 @@ else
     ## passwd -e $username
     chage -d 0 $username
 
-    # TO-DO: auto-expire the user after 3 days
-    ## chage --inactive $GRACE_PERIOD $username
+    # auto-expire the user if they still haven't logged in after 3 days
+    chage --inactive=$GRACE_PERIOD $username
   fi
 fi
 
