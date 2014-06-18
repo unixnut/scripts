@@ -7,18 +7,24 @@ GRACE_PERIOD=3
 USERADD=/usr/sbin/useradd
 
 
+append_to_file()
+{
+}
+
+
 # *** MAINLINE ***
 # == command-line parsing ==
 # -- defaults --
 locked=n
+queue=
 
 # -- option handling --
 # this is handled strangely because the rest of the arguments are passed to
 # useradd
 while [ x"$1" = x-L -o x"$1" = x-O ] ; do
   if [ x"$1" = x-O ] ; then
-    echo "${self}: Script output not supported yet" >&2
-    exit 2
+    outfile="$2"
+    queue=append_to_file
     shift   # get rid of the option; argument gets done below
   elif [ x"$1" = x-L ] ; then
     locked=y
