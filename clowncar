@@ -17,7 +17,7 @@ locked=n
 # useradd
 while [ x"$1" = x-L -o x"$1" = x-O ] ; do
   if [ x"$1" = x-O ] ; then
-    echo "${self}: Script output not supported yet" >&2
+    echo "${self}: Unimplemented: Script output not supported yet" >&2
     exit 2
     shift   # get rid of the option; argument gets done below
   elif [ x"$1" = x-L ] ; then
@@ -29,7 +29,7 @@ done
 
 # -- argument checking --
 if [ $# -lt 1 ] ; then
-  echo "${self}: username (and other useradd arguments) required" >&2
+  echo "${self}: Error: username (and other useradd arguments) required" >&2
   exit 1
 fi
 
@@ -63,7 +63,7 @@ fi
 homedir=$(getent passwd $username | cut -f6 -d:)
 
 if [ ! -d $homedir ] ; then
-  echo "Error: User $username's home directory doesn't exist"
+  echo "${self}: Error: User $username's home directory doesn't exist" >&2
   exit 3
 fi
 
