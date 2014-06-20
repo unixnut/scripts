@@ -24,6 +24,7 @@ fi
 
 
 count=0
+started=n
 while read line
 do
   if [ "$line" = "-----BEGIN CERTIFICATE-----" ] ; then
@@ -31,13 +32,19 @@ do
     count=$(expr $count + 1)
     filename=$OUTDIR/$count.crt
     exec 5> $filename
+    started=y
   fi
-  echo "$line" >&5
+
+  if [ $started = y ] ; then
+    echo "$line" >&5
+  fi
+
   # if the cert is finished and any command line arguments were present other
   # than a filename, invoke OpenSSL on the cert
   if [ $# -gt 0 -a "$line" = "-----END CERTIFICATE-----" ] ; then
     # close the file
     exec 5> /dev/null
+    started=n
     openssl x509 "$@" -noout -in $filename
   fi
 done
