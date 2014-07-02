@@ -22,16 +22,18 @@ clowncar_factory()
   # that's done by the concatenation of subsequent arguments.
   args="'${1//\'/\'\\\'\'}"
   shift
+  if [ $debug -gt 0 ] ; then echo "$args" ; fi
 
   for arg ; do
     args="$args' '${arg//\'/\'\\\'\'}"
+    if [ $debug -gt 0 ] ; then echo "$args" ; fi
   done
 
   # add the final argument's single quote
   args="$args'"
 
   # splice all info currently held into the output
-  sed -e "s/^set_ssh_key$/ssh_key='$ssh_key'/" \
+  sed -e "s%^set_ssh_key$%ssh_key='$ssh_key'%" \
       -e "2 s/clowncar/clowncar_$username/" \
       -e "/^# -- defaults --/,/^# -- end defaults --/ c\
 locked=$locked\n\
@@ -57,16 +59,19 @@ set_ssh_key()
 # -- defaults --
 locked=n
 # -- end defaults --
+debug=0
 
 # -- option handling --
 # this is handled strangely because the rest of the arguments are passed to
 # useradd
-while [ x"$1" = x-L -o x"$1" = x-O ] ; do
+while [ x"$1" = x-L -o x"$1" = x-O -o x"$1" = x-V ] ; do
   if [ x"$1" = x-O ] ; then
     output_filename="$2"
     shift   # get rid of the option; argument gets done below
   elif [ x"$1" = x-L ] ; then
     locked=y
+  elif [ x"$1" = x-V ] ; then
+    debug=1
   fi
 
   shift
