@@ -38,6 +38,7 @@ locked=$locked\n\
 username=$username\n\
 set $args" \
     $self > "$output_filename"
+  chmod a+x "$output_filename"
 }
 
 
