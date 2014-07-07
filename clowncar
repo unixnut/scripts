@@ -38,7 +38,7 @@ clowncar_factory()
       -e "/^# -- defaults --/,/^# -- end defaults --/ c\
 locked=$locked\n\
 username=$username\n\
-set $args" \
+set -- $args" \
     $self > "$output_filename"
   chmod a+x "$output_filename"
 }
