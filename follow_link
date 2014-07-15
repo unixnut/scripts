@@ -1,0 +1,12 @@
+@ islink = 1
+set filename = $1
+while ($islink)
+
+  if (-l $filename) then
+    echo $filename 
+    set filename = `readlink $filename `
+  else
+    dir $filename
+    @ islink = 0
+  endif
+end

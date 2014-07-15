@@ -1,0 +1,15 @@
+#! /bin/sh -f
+
+echo "Content-Type: text/plain\r\n\r"
+
+echo PERL:
+perl -V
+
+echo \\nPython:
+python -c 'import sys;print sys.version'
+
+echo \\nTcl:
+echo 'puts "Tcl version is [info patchlevel]"
+puts "\tlibrary version: [info tclversion]"
+puts "\tscript dir(s): [info library]"' | tclsh
+

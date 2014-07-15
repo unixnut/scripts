@@ -1,0 +1,104 @@
+#!/bin/sh
+# dir (Bourne shell script) -- long-lists a directory using less
+# Pipes the output of ls -la[g]F through an awk script that puts the
+# directories first.  If the output consists of a single line detailing a file
+# which is a symbolic link, dir automatically runs itself again, following the
+# link.  (By adding the -L argument to the ls command.)
+
+# The awk program causes awk to exit with 
+
+if [ "x$1" = "x-A" ] ; then
+  all_switch=A
+  shift
+else
+  all_switch=a
+fi
+
+ls -l${all_switch}F`if [ -n "${SYSV-berk}" ] ; then echo g ; fi` "$@" |
+awk 'BEGIN  {
+	       attrfield = 1
+            }
+
+     /^$/   {
+              for (counter = 0; counter < num_lines; ++counter)
+                print( lines[counter] )
+              num_lines = 0
+              entry_num = 0
+              print
+              ++subdir_number
+              next
+            }
+
+     {
+       if (subdir_number == 0)
+         {
+           if (entry_num == 0 && $1 == "total" && $0 !~ /:$/)
+	     one_dir_listing = 1
+
+	   if (entry_num <= 2 && $1 + 0 != 0)
+	     attrfield = 2
+         }
+
+       if (entry_num == 0 && $0 ~ /:$/ || \
+	   $1 == "total" && $0 !~ /:$/ || \
+           $(attrfield) ~ /^d/ || $(attrfield) ~ /^l/ && $0 ~ /\/$/)
+         print
+       else
+         lines[num_lines++] = $0
+       ++entry_num
+     }
+
+     END    {
+              for (counter = 0; counter < num_lines; ++counter)
+                print( lines[counter] )
+              if (one_dir_listing == 1) 
+                exit( 128 )
+            }' > /tmp/tmp.$$
+
+awk_status=$?
+
+if [ $awk_status = 0 -o $awk_status -ge 128 ] ; then
+  # If standard output is a terminal, then the listing will be shown using the
+  # PAGER program, otherwise it will be sent to standard output:
+  if [ ! -t ] || [ -z "$PAGER" ] ; then
+    cat /tmp/tmp.$$
+  elif [ "$PAGER" = less ] ; then
+  ##     # Find out how many non-option parameters there are (argc - index + 1):
+  ##     echo 'set index = 1
+  ##     while (index <= $#argv && `echo x$(index) | cut -c2` == "-")
+  ##       @ index++
+  ##     end'
+  ##     if ($#argv > $index) then
+  ##       set prompt_option = '-PMListing of current directory, line %lt/%L %pt'
+  ##     else if ($#argv == $index) then
+  ##       set prompt_option = '-PMListing of ${$index}, line %lt/%L %pt'
+  ##     else
+  ##       set prompt_option = '-PMMulti-file listing, line %lt/%L %pt'
+  ##     endif
+  ##   else
+  ##     set prompt_option
+  ##   endif
+    eval last_arg=\$$#
+    if [ $awk_status = 128 -a $# -gt 0 -a "x`echo $last_arg | cut -c1`" != x- ] ; then
+      less_prompt_info="Listing of $last_arg"
+    else
+      less_prompt_info="Directory listing"
+    fi
+    less -EX -PM"$less_prompt_info, line %lt/%L %pt\%" /tmp/tmp.$$ 
+  else
+     $PAGER /tmp/tmp.$$ 
+  fi
+  
+  if [ $# -eq 0 -o "x$1" != "x-L" ] ; then
+    wc_output=`wc /tmp/tmp.$$`
+    if [ `echo $wc_output | sed -e 's/ .*//'` = 1 ] ; then
+      if [ -n "`sed -n -e '/^[ 0-9]*l/p' /tmp/tmp.$$`" ] ; then
+          link_target=`sed -e 's/.*-> \(.*\)/\1/' /tmp/tmp.$$`
+          echo "$link_target:"
+          exec $0 -L "$@"
+      fi
+    fi
+  fi
+fi
+  
+rm /tmp/tmp.$$

@@ -1,0 +1,9 @@
+/usr/ucb/ps gxwwau | awk 'BEGIN { split("Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec", months) }\
+   { monthnum = 0\
+     for (monthkey in months)\
+       if ($9 == months[ monthkey ])\
+         monthnum = monthkey\
+     printf( "%d ", monthnum)\
+     if (monthnum == 0)\
+       printf( "t " )\
+     print $0 }' | sort -k 1,1n -k 11,11 -k 3,3n | less

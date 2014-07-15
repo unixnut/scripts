@@ -1,0 +1,27 @@
+#! /usr/bin/awk -f
+# wrap (awk script) -- wraps stdin
+
+/^-- $/          { insig = 1 }
+insig == 0       {
+                   line_length = 0
+                   for (current_field_num = 1; current_field_num <= NF - 1; \
+                        ++current_field_num)
+		     {
+    		       token_width = length( $(current_field_num) ) + 1
+    		       if (line_length + token_width > 77) 
+    			 { 
+    			   print( "" )
+    			   line_length = 0
+   			 } 
+		       printf( "%s ", $(current_field_num) )
+                         
+		       line_length += token_width 
+                     }
+                     
+                   if (line_length > 0 && line_length + length( $(NF) ) > 77) 
+    		     print( "" )
+                   print( $(NF) )
+#                    if (line_length > token_width)
+#                      print( "" )
+                 } 
+insig == 1

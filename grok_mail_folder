@@ -1,0 +1,41 @@
+#! /usr/bin/nawk -f
+
+BEGIN                 { FALSE = 0; TRUE = 1 }
+
+$1 == "From" && (byte_num == content_length + 1 || content_length == 0) \
+                      {
+                      	in_header = TRUE
+                      	content_length = 0
+                      	byte_num = 0
+                      	++message_num
+                        matched_to = FALSE
+                        matched_cc = FALSE
+                        matched_bcc = FALSE
+                      }
+
+in_header == FALSE    { byte_num += length( $0 ) + 1 }
+
+in_header == TRUE     {
+			if (NF > 0)
+                          {
+  			    if ($1 == "Content-Length:")
+  			      content_length = $2
+  			    else
+  			      if ($1 == "To:")
+                            	matched_to = /bugtraq/ || /BUGTRAQ/
+  			      else if ($1 ~ /^C[cC]:$/)
+                            	matched_cc = /bugtraq/ || /BUGTRAQ/
+  			      else if ($1 ~ /^B[cC][cC]:$/)
+                            	matched_bcc = /bugtraq/ || /BUGTRAQ/
+                              else
+                            	if ($1 == "Subject:")
+                            	  subject =  substr( $0, 10 )
+			  }
+                        else
+                          {
+                            in_header = FALSE
+                            if (! (matched_to || matched_cc || matched_bcc))
+                              printf( "%3d  %s\n", message_num, subject )
+			  }
+                      } 
+                        

@@ -1,0 +1,18 @@
+#! /bin/csh -f
+# rnethack (C shell script) -- allows the user to choose a saved game to restore
+
+if (! $?uid) set uid = `id -u`
+# find all game files and create list of names from ones matching the current UID
+# (file names are of the form /var/games/nethack/save/10533Kishisawa.gz)
+set char_names = (`ls /var/games/nethack/save/ | sed -n "s/.*$uid\(.*\)\.gz/\1/p"`)
+
+if ("$char_names" == "") then
+  echo no saved games
+else
+  echo $char_names
+  
+  foreach name ($char_names)
+    echo -n "restore $char_names? "
+    if ("`line`" == y) exec nethack -u $name
+  end
+endif

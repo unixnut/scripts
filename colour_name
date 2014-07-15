@@ -1,0 +1,25 @@
+#!/usr/bin/perl
+# colour_name (PERL script) -- finds the closest named match to an RGB tuple
+
+$min_diff = 999999999;
+open( BERK, "/usr/lib/X11/rgb.txt" );
+
+while( <BERK> )
+  {
+    $feeb = split;
+    $diff = ($_[ 0 ] - $ARGV[ 0 ]) ** 2 +
+    	    ($_[ 1 ] - $ARGV[ 1 ]) ** 2 + 
+            ($_[ 2 ] - $ARGV[ 2 ]) ** 2;
+    if ($diff < $min_diff && $feeb == 4)
+      {
+        $min_diff = $diff;
+        $best_name = $_[ 3 ];
+        $best_red = $_[ 0 ];
+        $best_green = $_[ 1 ];
+        $best_blue = $_[ 2 ];
+      }
+  }
+  
+print( $best_name . " " . 
+       $best_red . " " . $best_green . " " . $best_blue . "\n" );
+

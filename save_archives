@@ -1,0 +1,29 @@
+#! /usr/bin/awk -f
+# save_archives (AWK script) -- copies msgs on STDIN to appropriate mail folder
+
+BEGIN               { FALSE = 0; TRUE = !FALSE }
+
+$1 == "From"        { 
+                      in_header = TRUE
+                      num_saved_lines = 0
+                    }
+
+in_header == TRUE   {
+                      if ($0 == "")
+                        {
+                          for (line_counter = 1; line_counter <= num_saved_lines; ++line_counter)
+                            print( saved_lines[ line_counter ] ) > file_name
+                          in_header = FALSE
+                        }
+                      else
+                        {
+                          saved_lines[ ++num_saved_lines ] = $0
+                          if ($1 == "Subject:")
+                            if ($2 ~ /:$/)  # old format subject prefix
+                              file_name = "Mail/" tolower( substr( $2, 1, length( $2 ) - 1 ) )
+                            else    # new format ([blah])
+                              file_name = "Mail/" substr( $2, 2, length( $2 ) - 2 )
+                        }
+                    }
+
+in_header == FALSE  { print > file_name }

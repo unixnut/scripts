@@ -1,0 +1,9 @@
+#!/bin/csh
+# tfm (csh script) -- Displays a message if there is any e-mail waiting
+
+mail -e || exit
+echo 'There is mail waiting\!\!'
+echo ' __________'
+echo '|       ק‏ |'
+echo '| ננננ     |'
+echo '|__________|'

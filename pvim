@@ -1,0 +1,66 @@
+#!/bin/sh
+# pvim (Bourne shell script) -- captures standard input & edits it with vim
+# Usage: pvim [ -t ] [ -d ] [ -r | -g ] [ <file_name> ]
+# pvim prompts for a file name (if <file_name> was not specified) then copies
+# standard input into it and edits it with vim.  If <file_name> was prompted
+# for, or if the -t option was specified, then the file will be created in
+# public-html/frames/humour/text and be made world-readable.
+# Other options:
+#   -d   Make a temporary file and delete it after vim quits
+#   -r   Make the file world-readable
+#   -g   Like -r, but makes the file group-writeable as well
+
+if [ "x$1" = "x-g" ] ; then
+  shift
+  readable_=
+fi
+
+if [ "x$1" = "x-r" ] ; then
+  shift
+  readable=
+fi
+
+if [ "x$1" = "x-t" ] ; then
+  shift
+  in_text=
+fi
+
+if [ "x$1" = "x-d" ] ; then
+  shift
+  name=/tmp/pvim.$USER.$$
+  in_tmp=
+elif [ "$1" = "" ] ; then
+  echo -n "What do you want to call it?  public-html/frames/humour/text/"
+  read name < /dev/tty
+  in_text=
+else
+  name="$1"
+fi
+
+if [ -z "${in_text-not_set}" ] ; then
+  name="$HOME/public-html/frames/humour/text/$name"
+  readable=
+fi
+
+if [ -z "${in_text-not_set}" -a -f $name ] ; then
+  echo "But Wilbur, $name already exists!!" >&2
+  sleep 2
+else
+  if [ -z "${in_tmp-not_set}" -a $VISUAL = vim ] ; then
+    vim +':set nomodified' -
+  else
+    cat > "$name"
+    if [ -z "${readable-not_set}" ] ; then
+      chmod 644 "$name"
+    elif [ -z "${readable_-not_set}" ] ; then
+      chmod 664 "$name"
+    fi
+  
+    exec < /dev/tty
+    $VISUAL "$name"
+  
+    if [ -z "${in_tmp-not_set}" ] ; then
+      rm "$name"
+    fi
+  fi
+fi

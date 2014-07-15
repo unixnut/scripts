@@ -1,0 +1,4 @@
+#!/bin/sh
+# erecover (sh script) -- runs emacs with all files that have autosave files
+
+exec emacs `find $HOME -name '#*#' -print | sed -e 's/#\([^#]*\)#$/\1/'`

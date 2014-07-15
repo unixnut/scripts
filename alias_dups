@@ -1,0 +1,1 @@
+sed -n 's/^alias \([^ ]*\) .*/\1/p' /home/ucc/alastair/.mail_aliases | sort | uniq -d

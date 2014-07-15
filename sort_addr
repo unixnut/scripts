@@ -1,0 +1,5 @@
+#!/bin/sh
+# sort_addr (Bourne shell script) -- sort a list of contacts by e-mail address
+
+sed -e 's/ /###/g' -e 's/###</ </' "$1" | sort -k 2 | sed 's/###/ /g'
+

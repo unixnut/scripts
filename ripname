@@ -1,0 +1,16 @@
+#!/bin/csh
+# ripname (csh script) -- find the recipient in a message on stdin
+
+awk '/^From:/ { apostrophe_index = index( $0, "'\''" )       \
+		if (apostrophe_index > 0)                    \
+		  name = substr( $0, apostrophe_index + 1, length( $0 ) - apostrophe_index - 2 )                                             \
+		else                                         \
+		  {                                          \
+		    lt_index = index( $0, "<" ) - 8          \
+		    if (lt_index > 0)                        \
+		      name = substr( $0, 7, lt_index )       \
+                    else                                     \
+		      name = substr( $0, 7, 100 )            \
+		  }                                          \
+                print name                                   \
+	      }'

@@ -1,0 +1,43 @@
+#! /usr/bin/nawk -f
+# compare_times (nawk script) -- finds differences in 2 lists of name/mtime pairs
+# The lists should be on standard input and separated by "XXXX".
+# Usage: compare_times [baseline=<time of last comparison>] [verbose=1]
+
+$0 == "XXXX"   { second_set = 1 ; next }
+               {
+                 if (names[ $1 ] + 0 == 0)
+		   {
+		     if (! second_set)
+		       names[ $1 ] = $2
+		     else
+		       names[ $1 ] = 1
+                   }
+                 else
+                   {
+                     if (baseline != 0 &&
+                         $2 > baseline && names[ $1 ] > baseline&&
+                         $2 != names[ $1 ])
+                       print "! " $1
+                     else
+                       if (names[ $1 ] < $2)
+                         print "< " $1
+                       else
+                         if (names[ $1 ] > $2)
+                           print "> " $1
+                         else
+                           if (verbose)
+                             print "= " $1
+                     names[ $1 ] = 0
+                   }
+               }
+END            {
+                 # Flag the files which only exist in the second block
+		 # and those which only exist in the first:
+                 # (If they both exist, the value will have been reset.)
+                 for (key in names)
+                   if (names[ key ] == 1)
+                     print "< " key
+                   else
+                     if (names[ key ] > 1)
+                       print "> " key
+               }

@@ -1,0 +1,7 @@
+#!/bin/sh
+cp /tmp/spam.msg ~/spam$PPID
+cat > /tmp/spam.msg ; echo blah|mutt -a /tmp/spam.msg -s "hwaaarf" submit.oTOd3r08Ewptk54p@spam.spamcop.net
+muttstatus=$?
+echo $muttstatus "($SHELL)" >> ~/tmp/spamfwd.log
+/bin/ls -l /tmp/spam.msg >> ~/tmp/spamfwd.log 
+exit $muttstatus

@@ -1,0 +1,4 @@
+#! /bin/sh
+#  (Bourne shell script) -- 
+
+sed -n -e 's/.*[ <]\{1,\}\([^ ]*@[\-a-z0-9.]*\).*/\1/p'

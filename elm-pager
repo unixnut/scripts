@@ -1,0 +1,22 @@
+#!/bin/csh -f
+# elm-pager (csh script) -- Pages a message from elm using less
+# Set this script to be elm's pager program.  Takes standard input, builds a
+# proper message-reading style less prompt string and then views the input
+# with less.
+
+cat >/tmp/me.$$ 
+if ( "`head -1 /tmp/me.$$ | cut -d' ' -f1`" == From ) then
+  less /tmp/me.$$
+else
+  set wc_info = ( `wc /tmp/me.$$` )
+  set chunks = ( `awk -f ~/bin/elm-pager.awk PID=$$ LINES=$wc_info[1] /tmp/me.$$` )
+
+  less -P="Message $chunks[1]  ?ltline %lt?L/%L.  .byte %bB?s/%s. ?e(END) :?pB%pB\%..%t"  \
+       -PM"`sed -e 's/\([?%\\:.]\)/\\\1/g' -e 's/\^^^/%/g' /tmp/me2.$$`" \
+       -CE`if ($wc_info[1] - $chunks[2] <= $LINES - 2) echo e`  \
+       +$chunks[2] /tmp/me.$$
+
+  unalias rm
+  \rm /tmp/me2.$$ 
+endif
+\rm /tmp/me.$$ 

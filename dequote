@@ -1,0 +1,81 @@
+#! /usr/bin/awk -f
+# dequote (AWK script) -- Removes multiple levels of ">" and unwordwraps
+
+## ! 1,/^$/   {
+
+BEGIN      {
+             dont_use_max = 1
+           }
+
+           {
+             prev_line = this_line
+             ## prev_quote_count = quote_count
+             quote_count = 0
+             pos = 1
+             which_word = 1
+             was_quote = 0
+             # Scan from the start of the line, counting ">", til char found:
+             stop = 0
+             while (stop == 0 && pos <= length( $0 ))
+               {
+                 prev_char = this_char
+                 this_char = substr( $0, pos++, 1)
+                 if (this_char == ">")
+                   {
+                     was_quote = 1
+                     ++quote_count
+                   }
+                 else if (this_char == " " || this_char == "	")
+                   {
+                     was_quote = 0
+                     if (prev_char != " " && pos > 2)
+                       ++which_word
+                   }
+                 else
+                   {
+                     stop=1
+                     --pos
+                   }
+               }
+	     if (max_quotes < quote_count)
+	       max_quotes = quote_count
+             else
+               if (NF == which_word || prev_quote_count == quote_count)
+                 max_quotes = 0
+
+             line_length = length( $0 ) - pos + 1
+             while (substr( $0, line_length + pos - 1 ) == " ")
+               --line_length
+             prev_backslash = backslash
+             if ($(NF) == "\\")
+               backslash = 2
+             else
+               backslash = 0
+             this_line = substr( $0, pos, line_length - backslash )
+
+             ## print( "#$ " this_line " <" which_word "," was_quote "," prev_quote_count ">" )
+	     ## printf( quote_count );
+
+	     # if the previous line ended with a backslash or this one
+	     # has less quotes than it (or the max), then join them:
+             if (total_line_length + line_length > 40 && stop != 0 &&
+                 (quote_count < prev_quote_count ||  \
+		  !dont_use_max && quote_count < max_quotes ||  \
+		  stop && NF - which_word < unwrap) ||  \
+                 prev_backslash >= 1)
+               {
+                 total_line_length += line_length + 1
+                 built_line = built_line " " this_line
+               }
+             else
+               {
+                 if (NR > 1)
+		   print( built_line )
+                 built_line = this_line
+                 # establish the local maximum for quotes:
+                 prev_quote_count = quote_count
+		 total_line_length = line_length
+               }
+           }
+
+END        { print( built_line ) }

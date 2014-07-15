@@ -1,0 +1,7 @@
+#!/bin/sh
+# myxconsole (X-Windows Bourne shell script) -- tails $CONSOLE in an xterm
+
+if [ ! -f $HOME/.Xauthority ] ; then
+  sleep 2
+fi
+xterm -sb -iconic -geometry +0-0 -T "Console for $HOST" -n "($HOST)" -e tail -f $HOME/.xsession-errors >>$HOME/.xsession-errors 2>&1 &

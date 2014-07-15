@@ -1,0 +1,27 @@
+#!/bin/csh
+# pfq (csh script) -- Password file query script
+# Shows the /etc/passwd (and ypcat passwd) entries for the given user.
+# usage: pfq [ <search text> [ <field number> ] ]
+# If <search text> is not supplied, it defaults to the user running the script
+# If <field number> defaults to 1.  The allowable field numbers are:
+#  1: username
+#  2: encrypted password
+#  3: numeric user ID
+#  4: numeric group ID
+#  5: comment field
+#  6: home directory
+#  7: login shell
+#  0: the whole line
+
+if ($#argv == 0) then
+  set username=$USER
+else
+  set username=$1
+endif
+if ($#argv <= 1) then
+  set fieldnum=1
+else
+  set fieldnum=$2
+endif
+
+(cat /etc/passwd;ypcat passwd) | awk -F: '$'$fieldnum' ~ /'$username'/'

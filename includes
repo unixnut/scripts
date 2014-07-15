@@ -1,0 +1,30 @@
+#!/bin/csh -f
+# includes (csh script) -- Reports on the include files in all .c & .C files
+# Usage: includes [ <file> ... ]
+# Where file is the file(s) to look in.  (Default: "*.c *.C *.c++ *.cc".)
+# For each specified or found file which contains at least one line of the
+# form "#include "file.h"", a line of the form:
+#   "<object-file>: <include-file> ..."
+# is output, listing the file's name (with the extension replaced by .o) and
+# all relevant include files it refers to.
+#
+# This script is useful for updating makefiles.
+
+set files
+if ($#argv == 0) then
+  foreach pattern ("*.c" "*.C" "*.c++" "*.cc")
+    if ("`sh -c 'echo $pattern'`" != "$pattern") then
+      set files = ($files $pattern)
+    endif
+  end
+else
+  set files = "$*"
+endif
+
+foreach file ($files)
+  # this prevents unmatched wildcard patterns from causing a shell error:
+  set includes = `sed -n -e 's/^#include *"\(.*\)".*$/\1/p' $file`
+  if ("$includes" != "") then
+    echo "`echo $file | sed -e 's/\(.*\)\..*/\1.o/'`: $includes"
+  endif
+end
