@@ -1,4 +1,4 @@
-#! /usr/bin/nawk -f
+#! /usr/bin/awk -f
 # compare_times (nawk script) -- finds differences in 2 lists of name/mtime pairs
 # The lists should be on standard input and separated by "XXXX".
 # Usage: compare_times [baseline=<time of last comparison>] [verbose=1]

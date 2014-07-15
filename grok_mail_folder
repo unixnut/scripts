@@ -1,4 +1,4 @@
-#! /usr/bin/nawk -f
+#! /usr/bin/awk -f
 
 BEGIN                 { FALSE = 0; TRUE = 1 }
 
