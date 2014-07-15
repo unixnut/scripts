@@ -35,6 +35,9 @@ clowncar_factory()
   # splice all info currently held into the output
   sed -e "s%^set_ssh_key$%ssh_key='$ssh_key'%" \
       -e "2 s/clowncar/clowncar_$username/" \
+      -e "/^set_ssh_key()/,/^}/ d" \
+      -e "/^clowncar_factory()/,/^}/ d" \
+      -e "/^# -- option handling --/,/^# == sanity checking ==/ d" \
       -e "/^# -- defaults --/,/^# -- end defaults --/ c\
 locked=$locked\n\
 username=$username\n\
