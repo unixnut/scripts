@@ -1,0 +1,29 @@
+#! /bin/sh
+# vbd_dl (Bourne shell script) -- Download and tar duplicity backups
+#
+# 1) Download duplicity backups from andromeda using rsync
+# 2) make an incremental tarball of duplicity backups
+#
+# Doesn't use the date of the backup(s) to determine the tarball name, because
+# there might be more than one set files.
+
+host=vega
+source=andromeda.cacheboy.net:/backups/$host
+dl_date=$(date +%Y%m%d)
+tmpdir=/var/tmp/duplicty_$host
+tardest=/media/usb/backup/$host
+
+set -e
+
+if [ -d $tardest ] ; then
+  mkdir -p $tmpdir
+  rsync -a $source/ $tmpdir
+
+  # $tardest/list doesn't contain the name of the previous tarball, but it
+  # doesn't need to because the new incremental tarball will be created with
+  # files that aren't listed in $tardest/list
+  if [ -f $tardest/list ] ; then cp -p $tardest/list $tardest/list.old ; fi
+  tar cf $tardest/duplicity_$dl_date.tar --listed-incremental=$tardest/list "$@" -C $tmpdir .
+else
+  echo Warning: $tardest not present
+fi

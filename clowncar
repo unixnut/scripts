@@ -58,6 +58,11 @@ set_ssh_key()
 
 
 # *** MAINLINE ***
+# == pre-check ==
+if [ -z "$BASH_VERSION" ] ; then
+  echo "${self}: Error: script must be run as a program" >&2
+  exit 4
+fi
 # == command-line parsing ==
 # -- defaults --
 locked=n
