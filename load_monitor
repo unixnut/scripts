@@ -1,0 +1,16 @@
+#! /bin/sh
+# load_monitor (Bourne shell script) -- continously outputs the system load
+#
+# Each line is prefixed with the number of seconds since the Epoch, because
+# this is easier to analyse using a program.
+#
+# Usage: load_monitor [ <delay> ]
+
+# 5 seconds is the default
+DELAY=${1-5}
+
+while true
+do
+  echo "$(date +%s): $(cut -d' ' -f1-3 /proc/loadavg)"
+  sleep $DELAY
+done
