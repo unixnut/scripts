@@ -1,0 +1,24 @@
+#! /bin/csh -f
+# ~/bin/mutt_compose_editor (C shell script) -- edits an outgoing mutt message
+
+ln $1 $1.bak   # In case I accidently answer "no" to the postpone question.
+
+if (! $?VISUAL) set VISUAL
+
+if ($VISUAL =~ vi*) then
+  if ($VISUAL == vim) then
+    $VISUAL -X +':1\
+:set textwidth=68 noai ic' $*
+  else
+    $VISUAL +':1\
+:set wrapmargin=5 noai ic' $*
+  endif
+else
+  $VISUAL $*
+endif
+
+if ($status != 0) then
+  echo "Failed to run editor; program status value = $status"
+  echo "(press [ENTER] to continue)"
+  line
+endif
