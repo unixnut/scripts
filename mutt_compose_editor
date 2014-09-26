@@ -7,7 +7,7 @@ if (! $?VISUAL) set VISUAL
 
 if ($VISUAL =~ vi*) then
   if ($VISUAL == vim) then
-    $VISUAL -X +':1\
+    $VISUAL -X --cmd 'set dir=~/tmp' +':1\
 :set textwidth=68 noai ic' $*
   else
     $VISUAL +':1\
