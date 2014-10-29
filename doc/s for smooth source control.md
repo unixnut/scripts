@@ -6,7 +6,7 @@ systems (e.g. Git, Subversion)?
 | `s **i**nit`   | `svn co`     | `git clone`     | `hg clone` | | |
 | `s **e**mpty`  | `svnadmin create` | `git init`  | `hg init` | | |
 | `s **u**pdate` | `svn update` | `git pull`       | `hg pull -u` | | |
-| `s **a**dd` (track) | `svn add`    | N/A              | `hg add` | | |
+| `s **a**dd`    | `svn add`  | `git add -A`  | `hg add` | | |
 | `s **r**emove`   | `svn rm`     | `git rm` | `hg remove` | | |
 | `s **m**ove`   | `svn mv`     | `git mv` | `hg mv` | | |
 | `s **w**ho`  | `svn blame`  | `git blame`      | `hg annotate` | | |
@@ -21,18 +21,21 @@ systems (e.g. Git, Subversion)?
 | `s **sl**` (status-long) | `svn status --verbose`   | `git ???` | `hg ???` | | |
 | `s **sf**` (status-full) | `svn status --update`   | `git ???` | `hg ???` | | |
 | `s **sff**` (status-veryfull) | `svn status -uv` | `git ???` | `hg ???` | | |
-| `s **v**isualise`   | `svn ???`     | `git ls-files` | `hg manifest` | | |
+| `s **b**` (branch-stat) | N/A  | `git branch -v`      | `hg branches` | | |
+| `s **bl**` (branch-stat-long) | N/A  | `git branch -va`      | N/A  | | |
+| `s **br**` (branch-stat-remote) | N/A  | `git branch -vr`      | N/A  | | |
+| `s **v**isualise`   | `svn ls`     | `git ls-files` | `hg manifest` | | |
 | `s **ls**` (log-short) | `svn log --quiet` | `git log --oneline --graph` | `hg log` | | |
 | `s **l**og` | `svn log`   | `git log` | `hg log` | | |
 | `s **ll**` (log-long)  | `svn log --verbose`   | `git log --stat` | `hg log` | | |
 | `s **lf**` (log-full) | N/A   | `git log --patch` | `hg log -p` | | |
 | `s **lff**` (log-veryfull) | N/A | `git log --patch --full-diff` | ? | | |
-| `s **f**orget`   | `svn ???`  | `git reset` | `hg forget` | | |
+| `s **f**orget`   | `svn ???`  | `git reset HEAD` | `hg forget` | | |
 | `s **j**ump`  | `svn -r`     | `git checkout` | `hg update -r` | | |
 | `s **z**` (undo)   | `svn ???`     | `git reset --soft` | `hg rollback` | | |
 
 template: | `s ****`  | `svn `  | `git `      | `hg ` | | |
-Unused command shortcuts: `bghknopxy`
+Unused command shortcuts: `ghknopxy`
 
 Merging and Tagging are deliberately ignored for mow.
 
