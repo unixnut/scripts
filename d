@@ -11,8 +11,10 @@ install -m 600 /dev/null $temp_file
 # process all args
 for input_file ; do
   # sh reports errors with redirected files to STDERR even if it's redirected
-  if ! gpg < "$input_file" 2>> $temp_file
+  if gpg < "$input_file" 2>> $temp_file
   then
+    echo
+  else
     :
     ## echo "decrypt of '$input_file' failed" >&2
   fi
