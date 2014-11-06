@@ -6,11 +6,12 @@ systems (e.g. Git, Subversion)?
 | `s **i**nit`   | `svn co`     | `git clone`     | `hg clone` | | |
 | `s **e**mpty`  | `svnadmin create` | `git init`  | `hg init` | | |
 | `s **u**pdate` | `svn update` | `git pull`       | `hg pull -u` | | |
-| `s **a**dd`    | `svn add`  | `git add -A`  | `hg add` | | |
+| `s **a**dd`    | `svn add`  | `git add --intent-to-add --all`  | `hg add` | | |
 | `s **r**emove`   | `svn rm`     | `git rm` | `hg remove` | | |
 | `s **m**ove`   | `svn mv`     | `git mv` | `hg mv` | | |
 | `s **w**ho`  | `svn blame`  | `git blame`      | `hg annotate` | | |
-| `s **c**ommit` | `svn commit` | `git commit -a && git push <branch>` (no `-a` if paths given) | `hg commit && hg push` | | |
+| `s **c**ommit` | `svn update ; svn commit` | `git pull ; git commit -a && git push <branch>` (no `-a` if paths given) | `hg pull -u ; hg commit && hg push` | | |
+| `s **cq**` (commit-quick) | `svn commit` | `git commit -a && git push <branch>` (no `-a` if paths given) | `hg commit && hg push` | | |
 | `s **cl**` (commit-local) | N/A | `git commit -a` (no `-a` if paths given) | `hg commit` | | |
 | `s **q**uery`  | N/A     | `git whatchanged` | `hg outgoing` | | |
 | `s **t**ransfer` | N/A | `git push <branch>` | `hg push` | | |
