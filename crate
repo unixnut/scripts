@@ -16,7 +16,7 @@ import sys
 import urllib
 import json
 
-program_name = "hashpw"
+program_name = "crate"
 
 def help():
     print >>sys.stderr, "Usage: crate <from> <to> <api_key>"

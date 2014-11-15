@@ -1,0 +1,122 @@
+#! /bin/sh
+# userlist (Bourne shell script) -- list one or all users, with password and expiry info
+#
+# Options:
+#   -s <status>   Show only accounts with this status
+#   -x            also show accounts added by packages
+#   -X            show allow accounts including system accounts
+#   -d            (debug mode) displays the command line before execution (amongst
+#
+# Note: because it accesses the shadow database, this tool must be run as root
+
+self=`basename $0`
+allowed_options=s:xXd
+today=$(($(date +%s) / 86400))
+
+
+# *** FUNCTIONS ***
+# Expects a list of users in passwd(5) format on stdin
+process_user_list()
+{
+  if [ $print_header=y ] ; then
+    printf "%-12s %-9s %9s  %s %4s  %5s  %5s  %5s  %5s\n" Username Status Remaining Password Age 'Warn' 'Min.' 'Max.' 'Grace'
+    ## .. 'Warn for' 'Min. age' 'Max. age' 'Grace period'
+  fi
+  while IFS=: read username passwd uid gid gecos homedir loginshell _
+  do
+    [ $debug -gt 0 ] && echo "()" >&2
+    if [ $include_sys = all -o $uid -ge 500 ] ; then
+      getent shadow "$username" | \
+        while IFS=: read username passwd_crypt change_date min_age max_age warn_days grace_days expire_date
+        do
+          [ $debug -gt 0 ] && echo "($username $passwd_crypt $change_date $min_age $max_age $warn_days $grace_days $expire_date)" >&2
+          # See if the account is active, i.e. unexpired
+          status=active     # this is a default
+          if [ -z "$expire_date" ] ; then
+            remaining_days=-
+          else
+            # TO-DO: check if it has to be past the date to count as expired
+            if [ $expire_date -lt $today ] ; then
+              status=expired
+            fi
+            remaining_days=$(($expire_date - $today))
+          fi
+          # If it passed the expiry check, test the shell
+          if [ $status = active ] ; then
+            if [ "$shell" = /usr/sbin/nologin -o "$shell" = /bin/false ] ; then
+              status=disabled
+            else
+              if [ -z "$shell" ] ; then
+                shell=NONE
+              fi
+            fi
+          fi
+          if [ -z "$passwd_crypt" ] ; then
+            pwstatus=BLANK
+          else
+            case "$passwd_crypt" in
+              !\*) pwstatus=none ;;
+              \*)  pwstatus=none ;;
+              \!*) pwstatus=locked ;;
+              *)   pwstatus=set ;;
+            esac
+          fi
+          if [ $change_date = 0 ] ; then
+            pw_age=change
+          else
+            pw_age=$(($today - $change_date))
+            if [ $pw_age -lt 0 ] ; then
+              pwstatus=old
+            fi
+          fi
+
+          if [ $pwstatus = none ] ; then
+            status=disabled
+          fi
+
+          # Only print if conditions match
+          if [ $status = "$desired_status" -o \
+               -z "$desired_status" -a \
+               \( $status != disabled -o $include_sys != none \) ] ; then
+            printf "%-12.12s %-9s %9s  %-6s %6s  %5d  %5d  %5d  %5d\n" \
+              $username $status $remaining_days $pwstatus $pw_age $warn_days $min_age $max_age $grace_days
+            ## %8d  %8d  %8d  %12d
+          fi
+        done
+    fi
+  done
+}
+
+
+# *** MAINLINE ***
+# == command-line parsing ==
+# -- defaults --
+include_sys=none
+print_header=y
+debug=0
+
+# -- option handling --
+set -e
+eval set -- `getopt --shell=sh -n $self +$allowed_options "$@"`
+set +e        # getopt would have already reported the error
+
+while [ x"$1" != x-- ] ; do
+  case "$1" in
+    -s) desired_status="$2" ; shift ;;
+    -x) include_sys=some ;;
+    -X) include_sys=all ;;
+    -d) debug=1 ;;
+  esac
+  shift       # get rid of the option (or its arg if the inner shift already got rid it)
+done
+shift       # get rid of the "--"
+
+
+# == processing ==
+# check if a username was supplied
+if [ $# -gt 0 ] ; then
+  include_sys=y
+  getent passwd "$1" | process_user_list
+else
+  getent passwd | process_user_list
+fi
