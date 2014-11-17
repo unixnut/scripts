@@ -1,31 +1,83 @@
 #! /bin/sh
 # userlist (Bourne shell script) -- list one or all users, with password and expiry info
 #
-# Options:
-#   -s <status>   Show only accounts with this status
-#   -x            also show accounts added by packages
-#   -X            show allow accounts including system accounts
-#   -d            (debug mode) displays the command line before execution (amongst
+# See help() for usage.
 #
 # Note: because it accesses the shadow database, this tool must be run as root
 
 self=`basename $0`
-allowed_options=s:xXd
+allowed_options=s:xXdqvhfwo
+allowed_long_options=verbose,colour,color,wrap,oneline,help
 today=$(($(date +%s) / 86400))
 
 
 # *** FUNCTIONS ***
+help()
+{
+  cat << EOT_HELP
+Usage: userlist [-x|-X| -s <status>] [-q] [-v [-v [-f]] [-w]] [<username> ...]
+
+By default, shows all users, except system users (i.e. UID < 500) and
+disabled users (i.e. password crypt is equal to * (or !*); these were
+usually added by a package).  If specific usernames are provided, they
+are always shown (i.e. -s, -x and -X don't apply).
+
+Options:
+  -x            Also show accounts added by packages
+  -X            Show all accounts including system accounts
+  -s <status>   Show only accounts with this status (never system users)
+  -q            Don't show a header line
+  -v, --verbose Show a second, indented line per user with gecos info, IDs, etc.
+  -vv           Colourise heading in addition to behaviour provided by -v
+  -o, --oneline Don't wrap -v output
+  -f, --colour  Still colourise output (if -vv) even if STDOUT isn't a terminal
+                (which is useful if piping to less -R)
+  -d            (debug mode) displays shadow file entries to STDERR
+  -h, --help    Show this help
+
+Output:
+  The Status column is one of: active, disabled, expired.
+
+  The Password column is one of: set, locked, locked-B, BLANK, none.
+
+  The Remaining, Age, Warn, Min., Max., Grace (a.k.a. inactivity) columns are
+  all given in terms of days.  See shadow(5) for more information.
+  Remaining and Age are calculated by userlist, relative to today.
+
+Important info:
+  "none" means a specific invalid crypt, used to create the account disabled.
+
+  "locked-B" is a blank password that is locked, which isn't dangerous because
+  passwd refuses to unlock an account if doing so would make it passwordless.
+
+  SSH keys (or other methods), if configured, can be used to log into *any*
+  account with *any* Status (except "expired") or Password state.
+EOT_HELP
+
+  exit
+}
+
+
 # Expects a list of users in passwd(5) format on stdin
 process_user_list()
 {
-  if [ $print_header=y ] ; then
-    printf "%-12s %-9s %9s  %s %4s  %5s  %5s  %5s  %5s\n" Username Status Remaining Password Age 'Warn' 'Min.' 'Max.' 'Grace'
+  if [ $output_header = y ] ; then
+    # BOLD and NORMAL aren't defined unless $verbose >= 2
+    printf "$BOLD%-12s %-9s %9s  %s %4s  %5s  %5s  %5s  %5s$NORMAL$eol" Username Status Remaining Password Age 'Warn' 'Min.' 'Max.' 'Grace'
     ## .. 'Warn for' 'Min. age' 'Max. age' 'Grace period'
+    if [ $verbose -ge 1 ] ; then
+      printf "$BOLD  %-22s  %5s:%-5s  %-15s  %s$NORMAL\n" \
+        "Full name" UID GID "Login shell" "Home directory"
+      ## # TO-DO: output phone numbers, etc.
+      ## if [ $verbose -ge 2 ] ; then
+      ##   printf "  \n" ...
+      ## fi
+    fi
   fi
   while IFS=: read username passwd uid gid gecos homedir loginshell _
   do
     [ $debug -gt 0 ] && echo "()" >&2
-    if [ $include_sys = all -o $uid -ge 500 ] ; then
+    if [ $include_sys = all -o $uid -ge 500 -a $uid != 65534 ] ; then
       getent shadow "$username" | \
         while IFS=: read username passwd_crypt change_date min_age max_age warn_days grace_days expire_date
         do
@@ -51,16 +103,15 @@ process_user_list()
               fi
             fi
           fi
-          if [ -z "$passwd_crypt" ] ; then
-            pwstatus=BLANK
-          else
-            case "$passwd_crypt" in
-              !\*) pwstatus=none ;;
-              \*)  pwstatus=none ;;
-              \!*) pwstatus=locked ;;
-              *)   pwstatus=set ;;
-            esac
-          fi
+          case "$passwd_crypt" in
+            '')  pwstatus=BLANK ;;
+            !\*) pwstatus=none ;;
+            \*)  pwstatus=none ;;
+            \!)  pwstatus=locked-B ;;
+            \!*) pwstatus=locked ;;
+            \!*) pwstatus=locked ;;
+            *)   pwstatus=set ;;
+          esac
           if [ $change_date = 0 ] ; then
             pw_age=change
           else
@@ -74,13 +125,21 @@ process_user_list()
             status=disabled
           fi
 
-          # Only print if conditions match
+          # Only output if conditions match
           if [ $status = "$desired_status" -o \
                -z "$desired_status" -a \
                \( $status != disabled -o $include_sys != none \) ] ; then
-            printf "%-12.12s %-9s %9s  %-6s %6s  %5d  %5d  %5d  %5d\n" \
+            printf "%-12.12s %-9s %9s  %-6s %6s  %5d  %5d  %5d  %5d$eol" \
               $username $status $remaining_days $pwstatus $pw_age $warn_days $min_age $max_age $grace_days
             ## %8d  %8d  %8d  %12d
+            if [ $verbose -ge 1 ] ; then
+              printf "  %-22.22s  %5d:%-5d  %-15s  %s\n" \
+                "${gecos%%,*}" $uid $gid $loginshell $homedir
+              ## # TO-DO: output phone numbers, etc.
+              ## if [ $verbose -ge 2 ] ; then
+              ##   printf "  \n" ...
+              ## fi
+            fi
           fi
         done
     fi
@@ -92,31 +151,51 @@ process_user_list()
 # == command-line parsing ==
 # -- defaults --
 include_sys=none
-print_header=y
+output_header=y
+eol="\n"
 debug=0
+verbose=0
+force_colour=n
 
 # -- option handling --
 set -e
-eval set -- `getopt --shell=sh -n $self +$allowed_options "$@"`
-set +e        # getopt would have already reported the error
+orthogonal_opts=$(getopt --shell=sh --name=$self \
+  --options=+$allowed_options --longoptions=$allowed_long_options -- "$@")
+eval set -- "$orthogonal_opts"
+set +e      # getopt would have already reported the error
 
 while [ x"$1" != x-- ] ; do
   case "$1" in
     -s) desired_status="$2" ; shift ;;
     -x) include_sys=some ;;
     -X) include_sys=all ;;
-    -d) debug=1 ;;
+    -q) output_header=n ;;
+    -o|--oneline) eol= ;;   # no need for content: next line starts with "  "
+    -w|--wrap) eol="\n" ;;  # restore default
+    -f|--colour|--color) force_colour=y ;;
+    -d) debug=$((debug + 1)) ;;
+    -v|--verbose) verbose=$((verbose + 1)) ;;
+    -h|--help) help ;;
   esac
   shift       # get rid of the option (or its arg if the inner shift already got rid it)
 done
 shift       # get rid of the "--"
 
 
+# == preparation ==
+if [ $verbose -ge 2 -a \( -t 1 -o $force_colour = y \) ] ; then
+  BOLD=$(setterm -bold on)
+  NORMAL=$(setterm -bold off)
+fi
+
+
 # == processing ==
 # check if a username was supplied
 if [ $# -gt 0 ] ; then
-  include_sys=y
-  getent passwd "$1" | process_user_list
+  include_sys=all
+  for username ; do
+    getent passwd "$username"
+  done | process_user_list
 else
   getent passwd | process_user_list
 fi
