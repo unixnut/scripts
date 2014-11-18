@@ -12,8 +12,8 @@ install_user: $(PREFIX)/bin $(USER_SCRIPTS:%=$(PREFIX)/bin/%)
 
 install_admin: $(PREFIX)/sbin $(ADMIN_SCRIPTS:%=$(PREFIX)/sbin/%)
 
-install_doc: $(PREFIX)/share/doc/smooth $(PREFIX)/share/doc/smooth/smooth.md \
- $(PREFIX)/share/doc/userlist $(PREFIX)/share/doc/userlist/userlist.md
+install_doc: $(PREFIX)/share/doc/smooth $(PREFIX)/share/doc/smooth/README.md \
+ $(PREFIX)/share/doc/userlist $(PREFIX)/share/doc/userlist/README.md
 
 $(PREFIX)/bin/_s.sh: _s.sh
 	install -p -m 644 '$^' '$@'
@@ -21,13 +21,13 @@ $(PREFIX)/bin/_s.sh: _s.sh
 $(PREFIX)/bin $(PREFIX)/sbin:
 	install -d $@
 
-$(PREFIX)/share/doc/smooth/smooth.md: doc/s\ for\ smooth\ source\ control.md
+$(PREFIX)/share/doc/smooth/README.md: doc/s\ for\ smooth\ source\ control.md
 	install -p -m 644 '$^' '$@'
 
 $(PREFIX)/share/doc/smooth:
 	install -d -p $@
 
-$(PREFIX)/share/doc/userlist/userlist.md: doc/userlist.md
+$(PREFIX)/share/doc/userlist/README.md: doc/userlist.md
 	install -p -m 644 '$^' '$@'
 
 $(PREFIX)/share/doc/userlist:
