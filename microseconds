@@ -1,1 +1,3 @@
-date +%s%6N
+#! /bin/sh
+
+date "$@" +%s%6N

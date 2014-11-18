@@ -1,14 +1,34 @@
 #! /bin/sh
 # userlist (Bourne shell script) -- list one or all users, with password and expiry info
 #
+# Version: 1.1
+# Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
+# Licence: This project is released under the GNU General Public License
+#
 # See help() for usage.
 #
 # Note: Because it accesses the shadow database, userlist should be run as root.
 #       Otherwise it shows a warning and a minimal listing equivalent to -u.
+# 
+# Licence:
+#     This program is free software; you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation; either version 2 of the License, or (at
+#     your option) any later version.
+#
+#     See http://www.gnu.org/licenses/gpl-2.0.html for more information.
+#
+#     You can find the complete text of the GPLv2 in the file
+#     /usr/share/common-licenses/GPL-2 on Debian systems.
+#     Or see the file COPYING in the same directory as this program.
+#
 #
 # TO-DO:
-#   rainbow mode, which outputs all 14 pieces of information printed
-#   for each user in a different colour.
+#   + Rainbow mode, which outputs all 14 pieces of information printed
+#     for each user in a different colour.
+#   + Output phone numbers, etc.
+#   + check if today has to be past the expiry date to count as expired
+
 
 self=`basename $0`
 allowed_options=s:xXdqvhcCwogu
@@ -46,7 +66,8 @@ Options:
   -h, --help    Show this help
 
 Output:
-  The Status column is one of: active, disabled, expired.
+  The Status column is one of: active, disabled, expired.  (Note: This is
+  limited in unprivileged mode, and is left out unless verbose mode is active.)
 
   The Password column is one of: set, locked, LOCKED, BLANK, none.
 
@@ -55,10 +76,10 @@ Output:
   Remaining and Age are calculated by userlist, relative to today.
 
 Important info:
-  "none" means a specific invalid crypt, used to create the account disabled.
-
   "LOCKED" is a blank password that is locked, which isn't dangerous because
   passwd refuses to unlock an account if doing so would make it passwordless.
+
+  "none" means a specific invalid crypt, used to create the account disabled.
 
   SSH keys (or other methods), if configured, can be used to log into *any*
   account with *any* Status (except "expired") or Password state.
@@ -80,7 +101,7 @@ process_users_full()
     if [ $verbose -ge 1 ] ; then
       printf "$eol$bold  $passwd_header_format$normal" \
         "Full name" UID GID "Login shell" "Home directory"
-      ## # TO-DO: output phone numbers, etc.
+      ## # output phone numbers, etc.
       ## if [ $verbose -ge 2 ] ; then
       ##   printf "  \n" ...
       ## fi
@@ -101,7 +122,6 @@ process_users_full()
           if [ -z "$expire_date" ] ; then
             remaining_days=-
           else
-            # TO-DO: check if it has to be past the date to count as expired
             if [ $expire_date -lt $today ] ; then
               status=expired
             fi
@@ -151,7 +171,7 @@ process_users_full()
             if [ $verbose -ge 1 ] ; then
               printf "$eol  $passwd_field_format" \
                 "${gecos%%,*}" $uid $gid $loginshell $homedir
-              ## # TO-DO: output phone numbers, etc.
+              ## # output phone numbers, etc.
               ## if [ $verbose -ge 2 ] ; then
               ##   printf "$eol  " ...
               ## fi
@@ -175,7 +195,7 @@ $([ $verbose -ge 1 ] && echo "$status_field_format  ")\
 $passwd_header_format$normal" \
         Username $([ $verbose -ge 1 ] && echo Status) \
         "Full name" UID GID "Login shell" "Home directory"
-      ## # TO-DO: output phone numbers, etc.
+      ## # output phone numbers, etc.
       ## if [ $verbose -ge 2 ] ; then
       ##   printf "$eol  " ...
       ## fi
@@ -199,7 +219,7 @@ $passwd_header_format$normal" \
 $([ $verbose -ge 1 ] && echo "$status_field_format  ")$passwd_field_format" \
         $username $([ $verbose -ge 1 ] && echo $status) \
         "${gecos%%,*}" $uid $gid $loginshell $homedir
-      ## # TO-DO: output phone numbers, etc.
+      ## # output phone numbers, etc.
       ## if [ $verbose -ge 2 ] ; then
       ##   printf "$eol  " ...
       ## fi

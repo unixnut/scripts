@@ -1,6 +1,8 @@
 #!/bin/sh
 # pvim (Bourne shell script) -- captures standard input & edits it with vim
+#
 # Usage: pvim [ -t ] [ -d ] [ -r | -g ] [ <file_name> ]
+#
 # pvim prompts for a file name (if <file_name> was not specified) then copies
 # standard input into it and edits it with vim.  If <file_name> was prompted
 # for, or if the -t option was specified, then the file will be created in

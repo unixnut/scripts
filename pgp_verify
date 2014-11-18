@@ -1,4 +1,8 @@
 #! /bin/bash
-# 
+#
+# Shows concise output as to whether or not someone in our keyring
+# (we don't care who) has verified the signature on the given file.
+#
+# Usage: pgp_verify <file> <sigfile>
 gpg --quiet --no-verbose --batch  --output - --verify "$1" "$2" 2> >(egrep -v "^gpg: (Signature made |                aka )")
 
