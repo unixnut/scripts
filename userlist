@@ -95,8 +95,8 @@ process_users_full()
 {
   if [ $output_header = y ] ; then
     # $bold and $normal aren't defined unless $colour != no
-    printf "$bold$username_header_format $status_field_format  \
-%9s  %s %4s  %5s  %5s  %5s  %5s$normal" \
+    printf "$bold$username_header_format $status_field_format\
+%11s  %s %4s  %5s  %5s  %5s  %5s$normal" \
       Username Status Remaining Password Age 'Warn' 'Min.' 'Max.' 'Grace'
     ## .. 'Warn for' 'Min. age' 'Max. age' 'Grace period'
     if [ $verbose -ge 1 ] ; then
@@ -128,7 +128,8 @@ process_users_full()
             fi
             # test for special case dates
             if [ $expire_date = 0 -o $expire_date = 1 ] ; then
-              remaining_days="by admin"
+              # first part appears to be adjacent to the previous column
+              remaining_days="by admin  0"
             else
               remaining_days=$(($expire_date - $today))
             fi
@@ -170,7 +171,7 @@ process_users_full()
                -z "$desired_status" -a \
                \( $status != disabled -o $include_sys != none \) ] ; then
             printf "$username_field_format \
-%-9s %9s  %-6s %6s  %5d  %5d  %5d  %5d" \
+$status_field_format%11s  %-6s %6s  %5d  %5d  %5d  %5d" \
               "$username" \
               "$status" "$remaining_days" "$pwstatus" "$pw_age" $warn_days $min_age $max_age $grace_days
             ## %8d  %8d  %8d  %12d
