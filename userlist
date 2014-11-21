@@ -28,6 +28,7 @@
 #     for each user in a different colour.
 #   + Output phone numbers, etc.
 #   + check if today has to be past the expiry date to count as expired
+#   + option to sort output by various criteria
 
 
 self=`basename $0`
@@ -125,7 +126,12 @@ process_users_full()
             if [ $expire_date -lt $today ] ; then
               status=expired
             fi
-            remaining_days=$(($expire_date - $today))
+            # test for special case dates
+            if [ $expire_date = 0 -o $expire_date = 1 ] ; then
+              remaining_days="by admin"
+            else
+              remaining_days=$(($expire_date - $today))
+            fi
           fi
           # If it passed the expiry check, test the shell
           if [ $status = active ] ; then
@@ -309,14 +315,25 @@ fi
 
 # $gecos(trimmed) $uid $gid $loginshell $homedir
 # (Allow longer/unlimited field lengths (e.g. for $homedir) in oneline mode.)
-passwd_header_format="%-19s  %5s:%-5s\
-  $(if [ -z "$eol" ] ; then echo '%-18s' ; else echo '%-12s' ; fi)\
-  $(if [ -z "$eol" ] ; then echo '%-30s' ; else echo '%s' ; fi)"
-passwd_field_format="%-19.19s  %5d:%-5d\
-  $(if [ -z "$eol" ] ; then echo '%-18s' ; else echo '%-12s' ; fi)\
-  $(if [ -z "$eol" ] ; then echo '%-30s' ; else echo '%s' ; fi)"
-username_header_format="%-11s"
-username_field_format="%-11.11s"
+if [ -z "$eol" ] ; then
+  passwd_header_format="%-19s  %5s:%-5s  %-18s  %-30s"
+  passwd_field_format="%-19.19s  %5d:%-5d  %-18s  %-30s"
+  username_header_format="%-16s"
+  username_field_format="%-16.16s"
+else
+  # the unrestricted field on the end lets longer homedirs wrap when necessary
+  passwd_header_format="%-19s  %5s:%-5s  %-12s  %s"
+  passwd_field_format="%-19.19s  %5d:%-5d  %-12s  %s"
+  # There's more info in unprivileged mode, so make username column narrower
+  # (but only in multiline mode)
+  if [ $process_fn = process_users_minimal ] ; then
+    username_header_format="%-11s"
+    username_field_format="%-11.11s"
+  else
+    username_header_format="%-16s"
+    username_field_format="%-16.16s"
+  fi
+fi
 status_field_format="%-8s"
 
 
