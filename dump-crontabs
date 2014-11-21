@@ -10,6 +10,6 @@ mkdir $OUTPUT_DIR
 for user in $(sudo ls /var/spool/cron/crontabs) ; do
   # Only copy the file if it contains something
   if sudo [ -s $DIR/$user ] ; then
-    sudo crontab -u $user -l > tmp/$OUTPUT_DIR/$user.cron
+    sudo crontab -u $user -l > $OUTPUT_DIR/$user.cron
   fi
 done
