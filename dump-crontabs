@@ -1,13 +1,17 @@
 #! /bin/sh
 # dump-crontabs (Bourne shell script) -- 
 
-DIR=/var/spool/cron/crontabs
+if [ -d /var/spool/cron/crontabs ] ; then
+  DIR=/var/spool/cron/crontabs
+else
+  DIR=/var/spool/cron
+fi
 OUTPUT_DIR=tmp/$(date +%F)
 
 set -e
 mkdir $OUTPUT_DIR
 
-for user in $(sudo ls /var/spool/cron/crontabs) ; do
+for user in $(sudo ls $DIR) ; do
   # Only copy the file if it contains something
   if sudo [ -s $DIR/$user ] ; then
     sudo crontab -u $user -l > $OUTPUT_DIR/$user.cron
