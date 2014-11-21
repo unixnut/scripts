@@ -171,8 +171,8 @@ process_users_full()
                \( $status != disabled -o $include_sys != none \) ] ; then
             printf "$username_field_format \
 %-9s %9s  %-6s %6s  %5d  %5d  %5d  %5d" \
-              $username \
-              $status $remaining_days $pwstatus $pw_age $warn_days $min_age $max_age $grace_days
+              "$username" \
+              "$status" "$remaining_days" "$pwstatus" "$pw_age" $warn_days $min_age $max_age $grace_days
             ## %8d  %8d  %8d  %12d
             if [ $verbose -ge 1 ] ; then
               printf "$eol  $passwd_field_format" \
@@ -223,7 +223,7 @@ $passwd_header_format$normal" \
           
       printf "$username_field_format \
 $([ $verbose -ge 1 ] && echo "$status_field_format  ")$passwd_field_format" \
-        $username $([ $verbose -ge 1 ] && echo $status) \
+        "$username" "$([ $verbose -ge 1 ] && echo $status)" \
         "${gecos%%,*}" $uid $gid $loginshell $homedir
       ## # output phone numbers, etc.
       ## if [ $verbose -ge 2 ] ; then
