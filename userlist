@@ -222,9 +222,13 @@ $passwd_header_format$normal" \
         fi
       fi
           
+      # Print unprivileged mode output, maybe with status if requested.
+      # Warning: $status can only ever be one word.
+      # (It only appears as a printf argument under some circumstances,
+      # i.e. sometimes the $() output is nothing, an so can't be quoted.)
       printf "$username_field_format \
 $([ $verbose -ge 1 ] && echo "$status_field_format  ")$passwd_field_format" \
-        "$username" "$([ $verbose -ge 1 ] && echo $status)" \
+        "$username" $([ $verbose -ge 1 ] && echo $status) \
         "${gecos%%,*}" $uid $gid $loginshell $homedir
       ## # output phone numbers, etc.
       ## if [ $verbose -ge 2 ] ; then
