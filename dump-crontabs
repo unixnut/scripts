@@ -1,0 +1,14 @@
+#! /bin/sh
+# dump-crontabs (Bourne shell script) -- 
+
+DIR=/var/spool/cron/crontabs
+OUTPUT_DIR=tmp/$(date +%F)
+
+set -e
+mkdir $OUTPUT_DIR
+
+for $u in $(sudo ls /var/spool/cron/crontabs) ; do
+  if sudo [ -s $DIR/$u ] ; then
+    sudo crontab -u $u -l > tmp/$OUTPUT_DIR/$u.cron
+  fi
+done
