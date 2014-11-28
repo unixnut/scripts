@@ -1,0 +1,33 @@
+#! /usr/bin/awk -f
+# file-format (AWK script) -- Reports line ending type for a group of files
+#
+# Note: in awk, it is impossible to tell if the last line doesn't have an LF
+
+# Shows the info for a the file that was just processed
+function show_info()
+{
+  printf("%s:\tlines: %d, CRs: %d, format: %s\n",
+         prev_filename, prev_nr, cr_count,
+         cr_count == 0 ? "Unix" : (prev_nr != cr_count ? "MISMATCH" : "dos") );
+}
+
+
+# *** MAINLINE ***
+# Initialise at the start of each new file
+FNR == 1 {
+           if (prev_filename != "")
+           {
+             show_info();
+           }
+           
+           cr_count = 0;
+           # Track the filename ready for use at END or when a file change occurs
+           prev_filename = FILENAME;
+         } 
+
+/\r$/ { ++cr_count; }
+{ prev_nr = FNR; }
+
+END { 
+      show_info();
+    }

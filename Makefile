@@ -1,6 +1,6 @@
 PREFIX=/usr/local
 USER_SCRIPTS=aws-host-fingerprints find_swapfiles seconds milliseconds \
-  microseconds nanoseconds pem-foreach pgp_verify showcn \
+  microseconds nanoseconds pem-foreach pgp_verify showcn fileinfo file-format \
   smooth _s.sh
 # ... TO-DO: mkhtml or makehtml
 ADMIN_SCRIPTS=clowncar zonedate
