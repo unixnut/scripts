@@ -1,30 +1,116 @@
 #! /bin/bash
 # smooth (BASH script) -- git/svn/hg wrapper
 #
-# see [instructions](doc/s for smooth source control.md)
+# See [instructions](doc/s for smooth source control.md) for usage.
+# Options:
+#   -s      (Git only) Commit the staged files (i.e. the cache) 
+#   -d      Debug mode; for smooth developers only.
+#
+# Version: 0.8
+# Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
+# Keywords: git svn hg source-control wrapper
+# Licence: This project is released under the GNU General Public License
+#
+# Licence:
+#     This program is free software; you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation; either version 2 of the License, or (at
+#     your option) any later version.
+#
+#     See http://www.gnu.org/licenses/gpl-2.0.html for more information.
+#
+#     You can find the complete text of the GPLv2 in the file
+#     /usr/share/common-licenses/GPL-2 on Debian systems.
+#     Or see the file COPYING in the same directory as this program.
+#
+#
+# TO-DO:
+#   + pipe output for svn
+#   + accept -s for 'diff'
 
-SELF=$(basename $0)
+self=$(basename $0)
+allowed_options=ds
+
+
+git_current_branch()
+{
+  git branch | sed -n 's/^\* \(.*\)/\1/p'
+}
+
+
+# Outputs $branch (if set during command-line parsing) or the current branch
+git_which_branch()
+{
+  if [ -n "$branch" ] ; then
+    echo "$branch"
+  else
+    git_current_branch
+  fi
+}
+
+
+# Outputs the name of the remote for the appropriate branch (current or
+# specified, i.e. present in $branch).
+git_remote()
+{
+  git config --get "branch.$(git_which_branch).remote"
+}
+
+
+# Outputs the URL of the remote for the appropriate branch (current or
+# specified, i.e. present in $branch).
+git_url()
+{
+  # Get the origin ID for the branch and look up its URL
+  git config --get "remote.$(git_remote).url"
+}
 
 
 git_transfer()
 {
-  set -e
+  git push $(git_remote) $(git_which_branch)
+}
 
-  b=$(git branch | sed -n 's/^\* \(.*\)/\1/p')
-  b_remote=$(git config --get "branch.$b.remote")
-  
-  git push $b_remote $b
+
+# Internal use only
+git_do_commit()
+{
+  if [ $git_use_staged = y ] ; then
+    git commit
+  elif [ $# -eq 0 -o "$*" = . ] ; then
+    git commit -a
+  else
+    git commit "$@"
+  fi
 }
 
 
 git_commit()
 {
-  # Figure out if a fast-forward merge is possible
-  echo 'Running "git pull"...'
-  git pull
-  echo '...done.'
-  sleep 1
-  git commit -a && git_transfer
+  local transfer
+
+  if [ "x$1" = "x-l" ] ; then
+    transfer=n
+    shift
+  else
+    transfer=y
+  fi
+
+  if [ "x$1" = "x-q" ] ; then
+    # quick
+    shift
+  else
+    echo 'Running "git pull"...'
+    git pull
+    echo '...done.'
+    sleep 1
+  fi
+
+  if [ $transfer = y ] ; then
+    git_do_commit "$@" && git_transfer
+  else
+    git_do_commit "$@"
+  fi
 }
 
 
@@ -42,104 +128,357 @@ git_commit_paranoid()
     git merge FETCH_HEAD
     git stash pop || echo "smooth: WARNING: unstaged changes didn't re-apply; fix manually and run 'git stash drop'" >&2
   fi
-  git commit -a && git_transfer
+  git_do_commit "$@"
   ## if [ "$needs_merge" = y ] ; then
   ## fi
 }
 
 
+# If the branch doesn't exist, try to remote-track the equivalent branch from
+# the current branch's remote.
+git_smart_jump()
+{
+  # FIXME: implement
+  ## git checkout
+  not_implemented
+}
+
+
+# Merge the source branch's remote updates before merging it into this branch.
+git_smart_merge()
+{
+  # FIXME: implement
+  ## git checkout
+  not_implemented
+}
+
+
+## svn_commit()
+## {
+##   svn update ; svn commit
+## }
+
+
+hg_commit()
+{
+  not_implemented
+}
+
+
+not_implemented()
+{
+  echo "smooth: ERROR: action '$action' not implemented for $rtype" >&2
+  exit 4
+}
+
+
+dispatch_debug()
+{
+  pwd
+  eval echo \${r_$rtype[$action]}
+  echo "$@"
+  echo --------
+}
+
+
+dispatch()
+{
+  if [ -z "$(eval echo \${r_$rtype[$action]})" ] ; then
+    echo "smooth: ERROR: action '$action' not supported for $rtype" >&2
+    exit 4
+  fi
+  ## set -x
+  eval \${r_$rtype[$action]} '$revs' '"$@"'
+}
+
+
+# Queries the arg (a relative directory) to see if it belongs to a work tree.
+# If so, set $toplevel and $rtype.  If not, exit with an error message & code.
+# Assumes that .svn has already been tested for.
+set_toplevel()
+{
+  if toplevel=$(cd "$1" && git rev-parse --show-toplevel 2> /dev/null) ; then
+    # TO-DO: see what happens with submodules
+    rtype=git
+  elif toplevel=$(cd "$1" && hg root 2> /dev/null) ; then
+    rtype=hg
+  else
+    echo "smooth: ERROR: no revision control directory found in $PWD or parents" >&2
+    exit 3
+  fi
+}
+
+
+# File/dir args don't make sense for some actions.
+maybe_clear_args()
+{
+  # 'transfer', 'jump', 'branch' and 'here' don't take args; only $PWD is important
+  if [[ $action == [tjbh]* ]] ; then
+    args=()
+  fi
+}
+
+
+# Identify if the latest arg represents a change of toplevel, and if so, do
+# what is necessary to finish the previous arg group and start a new one.
+# Usage: maybe_start_arggroup <dir>
+maybe_start_arggroup()
+{
+  local prev_toplevel
+
+  # If the action is 'move' (which doesn't use multiple arg groups), only handle the first one.
+  if [[ $action != [m]* || -z "$prev_toplevel" ]] ; then
+    set_toplevel "$1"
+
+    # Try to identify the start of a new group other than the first
+    if [ -n "$prev_toplevel" -a "$toplevel" != "$prev_toplevel" ] ; then
+      maybe_clear_args
+      # Dispatch previous group of args (or just the toplevel)
+      (cd "$toplevel" && $dispatch "${args[@]}")
+
+      # Start the next arg group
+      prev_toplevel=$toplevel
+      args=()
+    fi
+  fi
+}
+
+
+# If it's a filename, find the directory
+dir_only()
+{
+  local dir
+
+  if [ -f "$1" ] ; then
+    dir=$(dirname "$1")
+  else
+    dir=$1
+  fi
+
+  echo "$dir"
+}
+
+
 # *** MAINLINE ***
+# Fill the associative arrays (one for each repo type), mapping actions to commands.
+# (_s.sh contains mappings generated from the docs by Makefile.)
 declare -A r_git r_svn r_hg
 . $(dirname "$0")/_s.sh
 r_git[commit]=git_commit
 r_git[c]=git_commit
+r_git[commit-quick]="git_commit -q"
+r_git[cq]="git_commit -q"
+r_git[commit-quick-local]="git_commit -l -q"
+r_git[cql]="git_commit -l -q"
+r_git[commit-local]="git_commit -l"
+r_git[cl]="git_commit -l"
+## r_svn[commit]=svn_commit
+## r_svn[c]=svn_commit
+r_hg[commit]=hg_commit
+r_hg[c]=hg_commit
+r_hg[commit-quick]="hg_commit -q"
+r_hg[cq]="hg_commit -q"
+r_hg[commit-quick-local]="hg_commit -l -q"
+r_hg[cql]="hg_commit -l -q"
+r_hg[commit-local]="hg_commit -l"
+r_hg[cl]="hg_commit -l"
 r_svn[status]="svn status"
 r_svn[s]="svn status"
 r_svn[st]="svn status"
-r_svn[track]=${r_svn[add]}
 r_git[status]="git status"
 r_git[s]="git status"
 r_git[st]="git status"
-r_git[track]=${r_git[add]}
 r_hg[status]="hg status"
 r_hg[s]="hg status"
 r_hg[st]="hg status"
-r_hg[track]=${r_hg[add]}
 r_git[transfer]="git_transfer"
 r_git[t]="git_transfer"
+r_git[stage]="git add --all"
+r_git[g]="git add --all"
 
 
 ## set -x
 
-# determine arg, i.e. which smooth subcommand to run
-case $SELF in
+# determine action, i.e. which smooth subcommand to run
+case $self in
   s|smooth)
     if [ $# = 0 ] ; then
-      arg=status
+      action=status
     else
-      arg=$1 
+      action=$1
       shift
     fi
     ;;
-  s-*) arg=${SELF#s-} ;;
+  s-*) action=${self#s-} ;;
   *)
     echo "smooth: ERROR: run as unknown name" >&2
     exit 4
     ;;
 esac
 
+## # tweak the action to make it a valid associative array key
+## action=${action//-/_}
 
-fn()
-{
-  # determine repository type
-  if [ -d .svn ] ; then
-    rtype=svn
-  else
-    # TO-DO: cache path rtypes
-    d=$PWD
-    while [ "$d" != / ] ; do
-      if [ -d "$d"/.git ] ; then
-	rtype=git
-	break
-      fi
-      d=$(dirname "$d")
-    done
+
+# == Command-line parsing ==
+# (1st arg was already used as the action (and discarded), if necessary)
+
+# -- defaults --
+debug=0
+git_use_staged=n
+
+# -- option handling --
+set -e
+orthogonal_opts=$(getopt --shell=sh --name=$self \
+  --options=+$allowed_options --longoptions=$allowed_long_options -- "$@")
+eval set -- "$orthogonal_opts"
+set +e      # getopt would have already reported the error
+
+while [ x"$1" != x-- ] ; do
+  case "$1" in
+    -d) debug=$((debug + 1)) ;;
+    -s) git_use_staged=y ;;
+  esac
+  shift       # get rid of the option (or its arg if the inner shift already got rid it)
+done
+shift       # get rid of the "--"
+
+# -- argument handling --
+# Check for a revision range, allowing for open-ended
+if [[ "$1" == *[^/]..[^/]* || "$1" == ..[^/]* || "$1" == *[^/].. ]] ; then
+  if [[ $action != [dl]* ]] ; then
+    echo "smooth: ERROR: revision arguments make no sense here" >&2
+    exit 5
   fi
-  if [ -z "$rtype" ] ; then
-    ## echo "smooth: WARNING: no revision control directory found in $PWD or parents" >&2
-    echo "smooth: ERROR: no revision control directory found in $PWD or parents" >&2
-    exit 3
+  revs=$1
+  shift
+fi
+
+# Check for a branch name for 'transfer', 'jump' or 'here'.
+# For 'jump', the first arg is always a branch name.
+# For 'here', the first arg is only a branch name if followed by "--".
+if [[ $action == [tjh]* ]] ; then
+  [ $debug -ge 2 ] && echo '$#:' $# action: $action '$2:' $2
+  if [[ $action != h* || ( $# -ge 2 && "x$2" == "x--" ) ]] ; then
+    # For 'here', this won't be done unless "--" is the second arg (signifying that
+    # the first arg is a branch name).
+    [ $debug -ge 1 ] && echo "(setting branch to $1)"
+    branch=$1
+    shift
   fi
-
-  if [ -z "$(eval echo \${r_$rtype[$arg]})" ] ; then
-    echo "smooth: ERROR: operation '$arg' not supported for $rtype" >&2
-    exit 4
+  if [ "x$1" = "x--" ] ; then
+    shift
   fi
-  ## set -x
-  eval \${r_$rtype[$arg]} '"$@"'
-}
+fi
 
 
-if [[ $arg == [mr]* ]] ; then
-  # find a common prefix
-  echo not yet
+# == Preparation ==
+if [ $debug -lt 2 ] ; then
+  dispatch=dispatch
 else
-  if [ -n "$1" ] ; then
-    # Process each argument by recursively calling this script
-    for dir do
-      if [ -d "$dir" ] ; then
-	(cd "$dir" && fn)   ## "$@"
-      else
-	# FIXME: this is a hack... should take refspec(s) as an option arg
-	if [[ "$dir" != */* || "$dir" = origin/* ]] ; then
-	  fn
-	else
-	  (cd "$(dirname "$dir")" && fn "${dir##*/}")   ## "$@"
-	fi
+  dispatch=dispatch_debug
+fi
+
+declare -a args
+args=()
+
+
+# == Processing ==
+# Break the argument list into a number of separate commands, each having the
+# same repository root.
+
+# This is only used for SVN testing
+if [ $# -eq 0 ] ; then
+  dir=.
+else
+  dir=$(dir_only "$1")
+fi
+
+## echo "start: $dir"
+## echo --------
+
+if [ -d "$dir/.svn" ] ; then
+  # Note: grouping doesn't work for svn; it's assumed there is only one group.
+  rtype=svn
+  # Strip the prefix off all the args.  This will only work properly if all the
+  # files in the same directory or if the highest-level path comes first.
+  # TO-DO: Find common parents in order to do group splitting like for git & hg
+  for arg ; do
+    sub_arg=${arg#$dir}
+    # Check that something was stripped.  If not then the above rule doesn't hold.
+    if [ "$dir" != . -a "$sub_arg" = "$arg" ] ; then
+      echo "smooth: ERROR: relative SVN craziness" >&2
+      exit 6
+    fi
+    args[${#args[@]}]=$sub_arg
+  done
+
+  (cd "$dir" && $dispatch "${args[@]}")
+else
+  # Check for git and/or hg (separate arg groups)
+
+  # These might be useful:
+  #   git rev-parse --is-inside-work-tree
+  #   git rev-parse --show-prefix
+  #     (returns the local path under the git repo root. (empty if you are at the git repo root))
+
+  case $action in
+    [e]*) # 'empty' (repo creation)
+      if [ $# -eq 0 ] ; then
+        echo "smooth: ERROR: repo type needed" >&2
+        exit 7
       fi
-    done
-  else
-    # No arguments so just get the job done
-    fn
-  fi
+      rtype=$1
+      shift
+
+      $dispatch "$@"
+      ;;
+
+    [i]*) # 'init' (repo creation)
+      url=$1
+      case $url in
+        git://|*\.git|https://github*|http://github*) rtype=git ;;
+        svn+ssh:*|http://*/svn/*) rtype=svn ;;
+        *) rtype=hg ;;
+      esac
+
+      $dispatch "$@"
+      ;;
+
+    *)
+      for arg ; do
+        # Non-file/dir args will have been processed and removed by now
+        if [ ! -e "$arg" ] ; then
+          echo "smooth: ERROR: '$arg' does not exist" >&2
+          exit 2
+        fi
+
+        set -e
+        maybe_start_arggroup "$(dir_only "$arg")"
+
+        # Append the current argument to the existing or new list, but first
+        # strip off the part of the path between the current directory and the toplevel
+        # FIXME: readlink translates symlinks to referents
+        arg_fullpath=$(readlink -f "$arg")
+        if [ "$arg_fullpath" = "$toplevel" ] ; then
+          args[${#args[@]}]=.
+        else
+          args[${#args[@]}]=${arg_fullpath#$toplevel/}
+        fi
+      done
+
+      # set a default in case there were no args or the action takes non-file/dir args
+      if [ $# -eq 0 ] ; then
+        set_toplevel .
+      else
+        maybe_clear_args
+      fi
+
+      # Dispatch final group of args, if any
+      (cd "$toplevel" && $dispatch "${args[@]}")
+      ;;
+  esac
+
+  ## if [ ${#args[@]} != 0 ] ; then
+  ## fi
 fi
