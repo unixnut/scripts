@@ -6,7 +6,7 @@
 #   -s      (Git only) Commit the staged files (i.e. the cache) 
 #   -d      Debug mode; for smooth developers only.
 #
-# Version: 0.8
+# Version: 0.9
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: git svn hg source-control wrapper
 # Licence: This project is released under the GNU General Public License
@@ -41,6 +41,9 @@ git_current_branch()
 # Outputs $branch (if set during command-line parsing) or the current branch
 git_which_branch()
 {
+  ## # force output of branch name
+  ## [ $debug -ge 3 ] && exec 2>&1
+
   if [ -n "$branch" ] ; then
     echo "$branch"
   else
@@ -50,7 +53,8 @@ git_which_branch()
 
 
 # Outputs the name of the remote for the appropriate branch (current or
-# specified, i.e. present in $branch).
+# specified, i.e. present in $branch) or nothing (and an non-zero exit code) if
+# the branch doesn't exist or doesn't have a remote.
 git_remote()
 {
   git config --get "branch.$(git_which_branch).remote"
@@ -61,14 +65,66 @@ git_remote()
 # specified, i.e. present in $branch).
 git_url()
 {
-  # Get the origin ID for the branch and look up its URL
-  git config --get "remote.$(git_remote).url"
+  local r
+
+  if ! r=$(git_remote)
+  then
+    echo "smooth: WARNING: branch '$branch' doesn't have a remote" >&2
+  else
+    # Get the origin ID for the branch and look up its URL
+    git config --get "remote.$r.url"
+  fi
 }
 
 
 git_transfer()
 {
-  git push $(git_remote) $(git_which_branch)
+  local r
+
+  if ! r=$(git_remote)
+  then
+    echo "smooth: ERROR: branch '$branch' does not exist or doesn't have a remote" >&2
+    exit 8
+  fi
+
+  git push "$r" $(git_which_branch)
+}
+
+
+# Creates a tag and pushes it.
+#
+# Options:
+#   -l      Don't push the tag
+git_push_tag()
+{
+  local r transfer
+
+  if [ -z "$tagname" ] ; then
+    echo "smooth: ERROR: tag name required" >&2
+    exit 9
+  fi
+
+  if [ "x$1" = "x-l" ] ; then
+    transfer=n
+    shift
+  else
+    transfer=y
+  fi
+
+  set -e
+  git tag "$@"
+
+  if [ $transfer = y ] ; then
+    if ! r=$(git_remote)
+    then
+      echo "smooth: ERROR: branch '$branch' does not exist or doesn't have a remote" >&2
+      exit 8
+    fi
+
+    git push "$r" "$tagname"
+  fi
+
+  set +e
 }
 
 
@@ -106,11 +162,14 @@ git_commit()
     sleep 1
   fi
 
+  set -e
+  git_do_commit "$@"
+
   if [ $transfer = y ] ; then
-    git_do_commit "$@" && git_transfer
-  else
-    git_do_commit "$@"
+    git_transfer
   fi
+
+  set +e
 }
 
 
@@ -172,6 +231,7 @@ not_implemented()
 }
 
 
+# Outputs the command and its args (on separate lines) instead of running it
 dispatch_debug()
 {
   pwd
@@ -188,7 +248,25 @@ dispatch()
     exit 4
   fi
   ## set -x
-  eval \${r_$rtype[$action]} '$revs' '"$@"'
+  eval \${r_$rtype[$action]} \
+    $(if [ $rtype = svn -a -n "$revs" ] ; then echo -r ${revs/../:} ; else echo $revs ; fi) \
+    '"$@"'
+}
+
+
+# Handle option if present (and hope pass-through options don't overlap with
+# options taken by individual functions).
+# Then immediately starts the next cycle of the loop that called this funciton.
+maybe_store_option()
+{
+  if [ "$no_more_options" != y ] ; then
+    if [[ "$1" != -- && "$1" == -* ]] ; then
+      args[${#args[@]}]=$1
+      continue
+    else
+      no_more_options=y
+    fi
+  fi
 }
 
 
@@ -224,9 +302,8 @@ maybe_clear_args()
 # Usage: maybe_start_arggroup <dir>
 maybe_start_arggroup()
 {
-  local prev_toplevel
-
-  # If the action is 'move' (which doesn't use multiple arg groups), only handle the first one.
+  # If the action is 'move' (which doesn't use multiple arg groups), only
+  # handle the first one.
   if [[ $action != [m]* || -z "$prev_toplevel" ]] ; then
     set_toplevel "$1"
 
@@ -331,8 +408,16 @@ git_use_staged=n
 set -e
 orthogonal_opts=$(getopt --shell=sh --name=$self \
   --options=+$allowed_options --longoptions=$allowed_long_options -- "$@")
+
+cmd_line=$*
 eval set -- "$orthogonal_opts"
 set +e      # getopt would have already reported the error
+
+# Equivalent to '$debug -ge 2' (or 3 for the 2nd one), given that options
+# haven't been parsed yet.
+# (Only works if -d comes first on command line.)
+[ x"$1" = x-d -a x"$2" = x-d ] && echo "options:$orthogonal_opts"
+[ x"$1" = x-d -a x"$2" = x-d -a x"$3" = x-d ] && echo "command line: $cmd_line"
 
 while [ x"$1" != x-- ] ; do
   case "$1" in
@@ -356,12 +441,12 @@ fi
 
 # Check for a branch name for 'transfer', 'jump' or 'here'.
 # For 'jump', the first arg is always a branch name.
-# For 'here', the first arg is only a branch name if followed by "--".
+# For 'transfer' or 'here', the first arg is only a branch name if followed by "--".
 if [[ $action == [tjh]* ]] ; then
   [ $debug -ge 2 ] && echo '$#:' $# action: $action '$2:' $2
-  if [[ $action != h* || ( $# -ge 2 && "x$2" == "x--" ) ]] ; then
-    # For 'here', this won't be done unless "--" is the second arg (signifying that
-    # the first arg is a branch name).
+  if [[ $action != [ht]* || ( $# -ge 2 && "x$2" == "x--" ) ]] ; then
+    # For some actions, this won't be done unless "--" is the second arg
+    # (signifying that the first arg is a branch name).
     [ $debug -ge 1 ] && echo "(setting branch to $1)"
     branch=$1
     shift
@@ -373,7 +458,7 @@ fi
 
 
 # == Preparation ==
-if [ $debug -lt 2 ] ; then
+if [ $debug -lt 3 ] ; then
   dispatch=dispatch
 else
   dispatch=dispatch_debug
@@ -400,11 +485,13 @@ fi
 if [ -d "$dir/.svn" ] ; then
   # Note: grouping doesn't work for svn; it's assumed there is only one group.
   rtype=svn
-  # Strip the prefix off all the args.  This will only work properly if all the
-  # files in the same directory or if the highest-level path comes first.
+  # Strip the path prefix off all the args.  This will only work properly if all
+  # the files in the same directory or if the highest-level path comes first.
   # TO-DO: Find common parents in order to do group splitting like for git & hg
   for arg ; do
-    sub_arg=${arg#$dir}
+    maybe_store_option "$arg"   # Might start the next loop cycle
+
+    sub_arg=${arg#$dir/}
     # Check that something was stripped.  If not then the above rule doesn't hold.
     if [ "$dir" != . -a "$sub_arg" = "$arg" ] ; then
       echo "smooth: ERROR: relative SVN craziness" >&2
@@ -445,15 +532,39 @@ else
       $dispatch "$@"
       ;;
 
+    n*) # 'new-tag*'
+      # Usage: s new-tag [<option>...] <dir> <tagname> [<commit> | <object>]
+      for arg ; do
+        maybe_store_option "$arg"   # Might start the next loop cycle
+
+        # Set the toplevel based on the first non-option arg, but otherwise ignore it.
+        if [ -z "$toplevel" ] ; then
+          if [ ! -e "$arg" ] ; then
+            echo "smooth: ERROR: '$arg' does not exist" >&2
+            exit 2
+          fi
+          set_toplevel "$(dir_only "$arg")"
+        else
+          # Assumes that the second non-option arg is the tag name
+          if [ -z "$tagname" ] ; then
+            tagname=$arg
+          fi
+          args[${#args[@]}]=$arg
+        fi
+      done
+
+      (cd "$toplevel" && $dispatch "${args[@]}")
+      ;;
+
     *)
       for arg ; do
-        # Non-file/dir args will have been processed and removed by now
+        maybe_store_option "$arg"   # Might start the next cycle
+
         if [ ! -e "$arg" ] ; then
           echo "smooth: ERROR: '$arg' does not exist" >&2
           exit 2
         fi
 
-        set -e
         maybe_start_arggroup "$(dir_only "$arg")"
 
         # Append the current argument to the existing or new list, but first

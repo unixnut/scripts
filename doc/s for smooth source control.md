@@ -29,7 +29,7 @@ name.
 | `s **i**nit`   | `svn co`     | `git clone`     | `hg clone` | | |
 | `s **e**mpty`  | `svnadmin create` | `git init`  | `hg init` | | |
 | `s **u**pdate` | `svn update` | `git pull`       | `hg pull -u` | | |
-| `s **a**dd`    | `svn add`    | `git add --intent-to-add --all`  | `hg add` | | |
+| `s **a**dd`    | `svn add`    | `git add --intent-to-add --all -v`  | `hg add` | | |
 | `s sta**g**e`  | N/A          | `git add --all`      | N/A | | |
 | `s **gp**` (stage-patch)  | N/A   | `git add --patch --all`  | N/A | | |
 | `s **r**emove` | `svn rm`     | `git rm` | `hg remove` | | |
@@ -44,6 +44,8 @@ name.
 | `s **cql**` (commit-quick-local) | N/A  | `git commit -a` (no `-a` if paths given)  | `hg commit` | | |
 | `s **q**uery`  | N/A     | `git whatchanged` | `hg outgoing` | | |
 | `s **t**ransfer` | N/A | `git push <branch>` | `hg push` | | |
+| `s **n**` (new-tag) | N/A | `git_push_tag` | N/A | | |
+| `s **nl**` (new-tag-local) | N/A | `git_push_tag -l` | N/A | | |
 | `s **d**iff`   | `svn diff`   | `git diff` | `hg diff` | | |
 | `s **ds**` (diff-staged) | N/A | `git diff --cached` | N/A | | |
 | `s **h**ere`   | `svn info`   | `git_url` | `hg info` | | |
@@ -67,7 +69,7 @@ name.
 | `s **z**` (undo)   | `echo carefully use 'svn revert'`  | `git reset --soft` | `hg rollback` | | |
 
 template: | `s ****`  | `svn `  | `git `      | `hg ` | | |
-Unused command shortcuts: `knopxy`
+Unused command shortcuts: `kopxy`
 
 Merging and Tagging are deliberately ignored for now.
 
