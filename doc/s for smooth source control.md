@@ -26,6 +26,7 @@ short-form name consisting of the initials of the words in the action
 name.
 
 | smooth         | Subversion   | git             | Mercurial  | Arch    | darcs |
+|----------------|--------------|-----------------|------------|---------|-------|
 | `s **i**nit`   | `svn co`     | `git clone`     | `hg clone` | | |
 | `s **e**mpty`  | `svnadmin create` | `git init`  | `hg init` | | |
 | `s **u**pdate` | `svn update` | `git pull`       | `hg pull -u` | | |
