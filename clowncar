@@ -4,6 +4,8 @@
 #   -V   (debug mode) displays the command line before execution (amongst
 #
 # TO-DO: Provide option to fail if user already exists
+#
+# Keywords: ssh security user
 
 self=$0
 ## ... clowncar

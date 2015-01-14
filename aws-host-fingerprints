@@ -1,5 +1,5 @@
 #! /bin/sh
-# aws-host-fingerprints (Bourne shell script) -- 
+# aws-host-fingerprints (Bourne shell script) -- extract SSH host key fingerprints from boot log
 
 self=aws-host-fingerprints
 
@@ -8,8 +8,8 @@ if [ -z "$1" ] ; then
   exit 1
 fi
 
-aws ec2 --output=text get-console-output --instance-id=$1 | \
-  sed -n '/^ec2: -----BEGIN SSH HOST KEY FINGERPRINTS-----/,/^ec2: -----END SSH HOST KEY FINGERPRINTS-----/p' | \
+aws ec2 --output=text get-console-output --instance-id=$1 |
+  sed -n '/^ec2: -----BEGIN SSH HOST KEY FINGERPRINTS-----/,/^ec2: -----END SSH HOST KEY FINGERPRINTS-----/p' |
   tee /tmp/aws-host-fingerprints_$$
 
 # If there is nothing in the file, throw an error

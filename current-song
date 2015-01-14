@@ -1,9 +1,64 @@
 #! /bin/sh
 # current-song (Bourne shell script) -- scrobbles to STDOUT
+#
+# Note: in some cases, requires package 'libqt4-dbus' for qdbus tool
+#
+# Keywords: scrobble rhythmbox banshee audacious amarok
+#
+# TO-DO:
+#   + snaffle more from https://github.com/vkolev/playCopy
+#   + if MUSIC_PLAYER isn't set:
+#       - read from ~/.config/current-song/config.sh if present
+#       - otherwise, read from ~/.config/current-song/_detected.sh if present
+#       - otherwise, detect player
+#       - ...and save to ~/.config/current-song/_detected.sh
+#   + option to override player
+#   + option to force detection (don't save)
 
-if [ "$MUSIC_PLAYER" = audacious ] ; then
-  audtool current-song
-else
-  echo 'current-song: please set MUSIC_PLAYER environment variable' >&2
-  exit 3
-fi | sed -e 's/\([^~]*\)~\([^~]*\)~ABSOLUTERADIOIR.*/\1 - \2/'
+self=current-song
+AWK_FN_getvalue="function getvalue(key) { return substr($0, length(key) + 3); }"
+
+
+# Options:
+#   -c      Use the command-line interface instead of DBus
+banshee_song()
+{
+  if [ "x$1" = x-c ] ; then
+    shift
+    { banshee --query-artist ; banshee --query-title ; } |
+      awk '$1 == "artist:"       { artist = getvalue("artist"); }
+           $1 == "title:"        { track = getvalue("title"); }
+           END                   { print artist " - " track; }'"
+           $AWK_FN_getvalue"
+  else
+    qdbus org.bansheeproject.Banshee /PlayerEngine GetCurrentTrack |
+      awk '$1 == "album-artist:" { artist = getvalue("album-artist"); }
+           $1 == "name:"         { track = getvalue("name"); }
+           END                   { print artist " - " track; }'"
+           $AWK_FN_getvalue"
+  fi
+}
+
+
+amarok_song()
+{
+  qdbus org.kde.amarok /Player org.freedesktop.MediaPlayer.GetMetadata |
+    awk '$1 == "artist:"       { artist = getvalue("artist"); }
+         $1 == "title:"        { track = getvalue("title"); }
+         END                   { print artist " - " track; }'"
+         $AWK_FN_getvalue"
+}
+
+
+# *** MAINLINE ***
+case "$MUSIC_PLAYER" in
+  audacious)	audtool current-song ;;
+  rhythmbox)	rhythmbox-client --print-playing ;;
+  amarok)	amarok_song ;;
+  banshee)	banshee_song ;;
+  *)
+    echo 'current-song: please set MUSIC_PLAYER environment variable' >&2
+    exit 3
+    ;;
+esac |
+  sed -e 's/\([^~]*\)~\([^~]*\)~ABSOLUTERADIOIR.*/\1 - \2/'

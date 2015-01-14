@@ -1,5 +1,7 @@
 #! /bin/sh
 # aws-upload-cert (Bourne shell script) -- "aws iam upload-server-certificate" wrapper
+#
+# Keywords: SSL AWS ELB
 
 self=`basename $0`
 allowed_options=n:
