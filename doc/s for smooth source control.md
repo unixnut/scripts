@@ -70,7 +70,7 @@ name.
 | `s **z**` (undo)   | `echo carefully use 'svn revert'`  | `git reset --soft` | `hg rollback` | | |
 
 template: | `s ****`  | `svn `  | `git `      | `hg ` | | |
-Unused command shortcuts: `kopxy`
+<br>Unused command shortcuts: `kopxy`
 
 Merging and Tagging are deliberately ignored for now.
 

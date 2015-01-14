@@ -260,7 +260,7 @@ dispatch()
 maybe_store_option()
 {
   if [ "$no_more_options" != y ] ; then
-    if [[ "$1" != -- && "$1" == -* ]] ; then
+    if [[ "$1" != -- && "$1" == -?* ]] ; then
       args[${#args[@]}]=$1
       continue
     else
@@ -386,7 +386,7 @@ case $self in
       shift
     fi
     ;;
-  s-*) action=${self#s-} ;;
+  s-?*) action=${self#s-} ;;
   *)
     echo "smooth: ERROR: run as unknown name" >&2
     exit 4
