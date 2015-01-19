@@ -6,7 +6,7 @@
 #   -s      (Git only) Commit the staged files (i.e. the cache) 
 #   -d      Debug mode; for smooth developers only.
 #
-# Version: 0.9
+# Version: 0.9.1
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: git svn hg source-control wrapper
 # Licence: This project is released under the GNU General Public License
@@ -464,13 +464,25 @@ else
   dispatch=dispatch_debug
 fi
 
-declare -a args
-args=()
+if [[ $action == d* && $git_use_staged = y ]] ; then
+##  case $rtype in
+##    git)
+      r_git[d]="git diff --staged"
+      r_git[diff]="git diff --staged"
+##      ;;
+
+##    *)
+##      echo "smooth: ERROR: option -s not supported for $rtype" >&2
+##      exit 10
+##  esac
+fi
 
 
 # == Processing ==
 # Break the argument list into a number of separate commands, each having the
 # same repository root.
+declare -a args
+args=()
 
 # This is only used for SVN testing
 if [ $# -eq 0 ] ; then
