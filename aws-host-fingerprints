@@ -1,5 +1,7 @@
 #! /bin/sh
 # aws-host-fingerprints (Bourne shell script) -- extract SSH host key fingerprints from boot log
+#
+# Keywords: ssh AWS EC2 security
 
 self=aws-host-fingerprints
 

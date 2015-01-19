@@ -1,0 +1,244 @@
+#! /bin/bash
+# hostrename (BASH script) -- portable host rename tool
+#
+# Version: 0.6
+# Copyright: (c) 2015 Alastair Irvine <alastair@plug.org.au>
+# Keywords: hostname
+# Licence: This project is released under the GNU General Public License
+#
+# See show_help() for usage.
+#
+# Thanks to the following:
+#   + https://wiki.debian.org/HowTo/ChangeHostname
+#   + http://www.itzgeek.com/how-tos/linux/centos-how-tos/change-hostname-in-centos-7-rhel-7.html#axzz3PFs3EXN8 
+#   + http://www.cyberciti.biz/faq/centos-hostname-change-command-line/ 
+
+## /bin/hostnamectl set-hostname --static <x>
+
+self=hostrename
+allowed_options=mhdv
+allowed_long_options=use-mailname,help,verbose::,debug::
+
+
+# *** FUNCTIONS ***
+show_help()
+{
+  cat << EOT_HELP
+Usage: $self [-m | --use-mailname] <new_hostname> [<new_mailname>]
+EOT_HELP
+}
+
+
+# Sets <$1> to $2, or increases <$1> if $2 is absent.
+numeric_opt()
+{
+  # sanitise the value by aggressively stripping off a non-numeric suffix
+  local value=${2%%[^0-9]*}
+
+  if [ -z "$value" ] ; then
+    eval "$1=\$(($1 + 1))"
+  else
+    eval "$1=$value"
+  fi
+}
+
+
+# Make copies of a config file pointed to by a variable, "back up" the variable
+# contents and then change it to point to the copied file.
+make_fake()
+{
+  local location=$2
+  local file copy
+
+  # make a convenience copy of the variable and back up the contents
+  eval file=\$$1
+  eval real_$1=$file
+
+  if [ -f $file ] ; then
+    alternate_file=$location/${file##*/}
+    cp -p $file $alternate_file
+  fi
+
+  # change the variable
+  eval $1=$alternate_file
+}
+
+
+alter_copies()
+{
+  # Create copies of the config files and modify them instead
+  rm -rf /tmp/$self.$$
+  mkdir /tmp/$self.$$
+  make_fake sysconfig_network_file /tmp/$self.$$
+  make_fake hostname_file /tmp/$self.$$
+  make_fake hosts_file /tmp/$self.$$
+  ## sed --in-place "/^127\.0\.1\.1\>/ d" $hosts_file
+  ## if grep --quiet -F ^127.0.1.1 $hosts_file 
+  ## then
+  ##   echo 127.0.1.1 is still there!
+  ##   exit 19
+  ## fi
+  make_fake mailname_file /tmp/$self.$$
+  echo modified files in /tmp/$self.$$
+}
+
+
+# Updates /etc/hosts to add or change the hostname
+# If $use_mailname is set to y, $mailname will be included as an alias
+update_hosts_file()
+{
+  local hosts_sed_subst="$longname $([ "$use_mailname" = y ] && echo "$mailname ")$shortname"
+
+  # check for a fake localhost address
+  # (for rationale on 127.0.1.1, see http://qref.sourceforge.net/quick/ch-gateway.en.html )
+  if grep --quiet '^127\.0\.1\.1\>' $hosts_file
+  then
+    sed --in-place=.old "s/^127\.0\.1\.1\>.*/127.0.1.1\t$hosts_sed_subst/" \
+      $hosts_file
+  elif grep --quiet "^[^#]*\<${oldhostname//./\\.}\>" $hosts_file
+  then
+    # There's a static entry, so replace that.
+    # replace the hostname (with dots quoted) leaving the IP address intact
+    sed --in-place=.old "/^[^#]*\<${oldhostname//./\\.}\>/ s/^\([^[:space:]]*\).*/\1\t$hosts_sed_subst/" \
+      $hosts_file
+  else
+    # There isn't currently a hostname entry in $hosts_file, so add one after
+    # the localhost entry
+    sed --in-place=.old "/^127\.0\.0\.1\>/ a\
+127.0.1.1\t$hosts_sed_subst" \
+      $hosts_file
+  fi
+}
+
+
+# *** MAINLINE ***
+# == Command-line parsing ==
+# (1st arg was already used as the action (and discarded), if necessary)
+
+# -- defaults --
+hosts_file=/etc/hosts
+hostname_file=/etc/hostname
+sysconfig_network_file=/etc/sysconfig/network
+mailname_file=/etc/mailname
+use_mailname=n
+debug=0
+verbose=0
+
+# -- option handling --
+set -e
+orthogonal_opts=$(getopt --shell=sh --name=$self \
+  --options=+$allowed_options --longoptions=$allowed_long_options -- "$@")
+
+cmd_line=$*
+eval set -- "$orthogonal_opts"
+set +e      # getopt would have already reported the error
+
+while [ x"$1" != x-- ] ; do
+  ## echo "option: $1 [$2]"
+  # Note: absent optional arguments for long options are replaced with the empty string
+
+  case "$1" in
+    -m|--use-mailname) use_mailname=y ;;
+    -h|--help)    show_help ; exit ;;
+    -d)      debug=$((debug + 1)) ;;
+    --debug) numeric_opt debug "$2" ; shift ;;
+    -v)        verbose=$((verbose + 1)) ;;
+    --verbose) numeric_opt verbose "$2" ; shift ;;
+  esac
+  shift       # get rid of the option (or its arg if the inner shift removed the option)
+done
+shift       # get rid of the "--"
+[ $debug -ge 3 ] && echo "command line: $cmd_line"
+[ $debug -ge 2 ] && echo "opts: $orthogonal_opts"
+
+# -- argument handling --
+if [ $# -lt 1 -o $# -gt 2 ] ; then
+  echo "${self}: Error: Invalid arguments" >&2
+  show_help
+  exit 1
+fi
+
+# check for dot in hostname
+if echo $1 | grep --quiet -F .
+then
+  shortname=${1%%.*}
+  longname=$1
+else
+  shortname=$1
+  longname=$1.$(dnsdomainname)
+  echo "${self}: Warning: hostname is not fully qualified; assuming $longname" >&2
+fi
+
+if [ -z "$2" ] ; then
+  mailname=$longname
+else
+  mailname=$2
+fi
+
+
+# == sanity checking ==
+if [ "$use_mailname" = y -a -z "$mailname" ] ; then
+  echo "${self}: Error: mailname argument not supplied, but required by option" >&2
+  exit 1
+fi
+
+
+# == Preparation ==
+oldhostname=$(hostname)
+[ $debug -ge 2 ] && alter_copies
+
+
+# == Processing ==
+[ $debug -ge 1 ] && echo verbose=$verbose and debug=$debug
+
+if [ $verbose -ge 1 ] ; then
+  echo "renaming $oldhostname to $longname"
+  if [ $verbose -ge 2 ] ; then
+    echo "(shortname = '$shortname'; mailname = '$mailname')"
+  fi
+fi
+
+[ $debug -ge 3 ] && exit
+
+# check for systemd present
+if [ -x /bin/hostnamectl ] ; then
+  hostnamectl set-hostname $longname
+else
+  # Check for RedHat or Amazon Linux
+  if [ -f /etc/redhat-release -o -f /etc/system-release ] ; then
+    if [ -x /usr/bin/nmcli ] ; then
+      # assume that Network Manager can rename the hostname
+      nmcli general hostname $longname
+    else
+      sed --in-place=.old "s/^HOSTNAME=.*/HOSTNAME=$longname/" \
+        $sysconfig_network_file
+      update_hosts_file
+    fi
+
+    # TO-DO: check for Postfix and if so, edit /etc/postfix/main.cf as follows:
+    #   + myhostname = $longname
+    #   + myorigin   = $mailname
+
+    # RedHat handles this differently to Debian
+    hostname $longname
+
+  elif [ -f /etc/debian_version ] ; then
+    cp -p $hostname_file $hostname_file.old 2> /dev/null
+    echo $shortname > $hostname_file
+    update_hosts_file
+
+    # Update /etc/mailname if it doesn't exist or if $mailname is different
+    if [ ! -f /etc/mailname -o -n "$mailname" ] ; then
+      # TO-DO: handle the case where the mailname doesn't correspond to the old hostname
+      if [ "$(cat /etc/mailname 2> /dev/null)" != "$mailname" ] ; then
+        cp -p $mailname_file $mailname_file.old 2> /dev/null
+        echo $mailname > $mailname_file
+      fi
+    fi
+    # TO-DO: check for Postfix and if so, edit /etc/postfix/main.cf as follows:
+    #   + myhostname = $longname
+
+    # RedHat handles this differently to Debian
+    hostname $shortname
+  fi
+fi
