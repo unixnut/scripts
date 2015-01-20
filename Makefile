@@ -15,9 +15,6 @@ install_admin: $(PREFIX)/sbin $(ADMIN_SCRIPTS:%=$(PREFIX)/sbin/%)
 install_doc: $(PREFIX)/share/doc/smooth $(PREFIX)/share/doc/smooth/README.md \
  $(PREFIX)/share/doc/userlist $(PREFIX)/share/doc/userlist/README.md
 
-$(PREFIX)/bin/_s.sh: _s.sh
-	install -p -m 644 '$^' '$@'
-
 $(PREFIX)/bin $(PREFIX)/sbin:
 	install -d $@
 
@@ -33,12 +30,22 @@ $(PREFIX)/share/doc/userlist/README.md: doc/userlist.md
 $(PREFIX)/share/doc/userlist:
 	install -d -p $@
 
+# -- implicit rules --
 $(PREFIX)/bin/%: %
 	install -p '$<' '$@'
 
 $(PREFIX)/sbin/%: %
 	install -p '$<' '$@'
 
+# -- extra requirements --
+$(PREFIX)/bin/smooth: $(PREFIX)/bin/_s.sh
+
+# Install requirements for certain files
+# TO-DO: move to $(PREFIX)/lib
+$(PREFIX)/bin/_s.sh: _s.sh
+	install -p -m 644 '$^' '$@'
+
+# Generate requirements needed above
 # TO-DO: allow for highlighted letter in the middle of an action
 _s.sh: doc/s\ for\ smooth\ source\ control.md
 	(sed -n -e 's/^| `s \*\*\([^*]*\)\*\*\([^` (]*\)` *| *`\(svn[^`]*\).*/r_svn[\1\2]="\3"\nr_svn[\1]="\3"/p' \

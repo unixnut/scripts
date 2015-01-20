@@ -6,7 +6,7 @@
 #   -s      (Git only) Commit the staged files (i.e. the cache) 
 #   -d      Debug mode; for smooth developers only.
 #
-# Version: 0.9.1
+# Version: 0.9.2
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: git svn hg source-control wrapper
 # Licence: This project is released under the GNU General Public License
@@ -286,8 +286,8 @@ set_toplevel()
 # File/dir args don't make sense for some actions.
 maybe_clear_args()
 {
-  # 'transfer', 'jump', 'branch' and 'here' don't take args; only $PWD is important
-  if [[ $action == [tjbh]* ]] ; then
+  # 'transfer', 'jump', 'branch', 'update' and 'here' don't take args; only $PWD is important
+  if [[ $action == [tjbuh]* ]] ; then
     args=()
   fi
 }
@@ -370,8 +370,7 @@ r_git[stage]="git add --all"
 r_git[g]="git add --all"
 
 
-## set -x
-
+# == Command-line parsing ==
 # determine action, i.e. which smooth subcommand to run
 case $self in
   s|smooth)
@@ -389,11 +388,6 @@ case $self in
     ;;
 esac
 
-## # tweak the action to make it a valid associative array key
-## action=${action//-/_}
-
-
-# == Command-line parsing ==
 # (1st arg was already used as the action (and discarded), if necessary)
 
 # -- defaults --
