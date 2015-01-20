@@ -3,14 +3,13 @@
 #
 # Version: 1.1
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
+# Keywords: users passwd group gecos expiry
 # Licence: This project is released under the GNU General Public License
 #
 # See help() for usage.
 #
 # Note: Because it accesses the shadow database, userlist should be run as root.
 #       Otherwise it shows a warning and a minimal listing equivalent to -u.
-#
-# Keywords: users passwd group gecos expiry
 # 
 # Licence:
 #     This program is free software; you can redistribute it and/or modify

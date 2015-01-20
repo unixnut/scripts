@@ -197,18 +197,14 @@ git_commit_paranoid()
 # the current branch's remote.
 git_smart_jump()
 {
-  # FIXME: implement
-  ## git checkout
-  not_implemented
+  not_implemented   # FIXME
 }
 
 
 # Merge the source branch's remote updates before merging it into this branch.
 git_smart_merge()
 {
-  # FIXME: implement
-  ## git checkout
-  not_implemented
+  not_implemented   # FIXME
 }
 
 
@@ -220,7 +216,7 @@ git_smart_merge()
 
 hg_commit()
 {
-  not_implemented
+  not_implemented   # FIXME
 }
 
 
