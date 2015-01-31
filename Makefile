@@ -5,7 +5,10 @@ USER_SCRIPTS=aws-host-fingerprints find_swapfiles seconds milliseconds \
 # ... TO-DO: mkhtml or makehtml
 ADMIN_SCRIPTS=clowncar zonedate userlist hostrename
 
-.PHONY: install install_user install_admin install_doc
+.PHONY: update install install_user install_admin install_doc
+update:
+	git pull
+
 install: install_user install_admin install_doc
 
 install_user: $(PREFIX)/bin $(USER_SCRIPTS:%=$(PREFIX)/bin/%)
