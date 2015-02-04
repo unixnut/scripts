@@ -4,9 +4,53 @@
 # Version: 1.0
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: ssh security user
+# Notice: Can cause security weaknesses in some cases.  See Warnings below.
 # Licence: This project is released under the GNU General Public License
 #
-#   -V   (debug mode) displays the command line before execution (amongst
+# clowncar accepts all useradd options, and a few of its own (which must come
+# first on the command line).  In addition, it accepts an SSH public key on
+# standard input.  This is prompted for if stdin is a terminal.
+#
+# When the user is (eventually) created, .ssh/authorized_keys will be created
+# in the user's home directory, containing the supplied public key.  This will
+# work even if the user already exists, and even if they already have a
+# .ssh/authorized_keys file (but not if the same key is already present).
+#
+# The script operates in one of two modes.  By default, "clowncar mode" is
+# used; this creates a user immediately, on the system it is being run on.
+# clowncar must be run as root in this case.
+#
+# If -O is supplied, "clowncar factory mode" is used; this accepts similar
+# useradd options as the other mode, but does not create a user.  (Therefore
+# root isn't required.)  Instead, it creates a script (e.g. clowncar-bill) that
+# has those options and the public key "baked in", which will create the user when
+# run without options.
+#
+# Because clowncar is mostly used for creating accounts for people, by default
+# it will create the user with an (unlocked) empty password and mark it as
+# expired so that the user will be prompted to set a new password when they log
+# in.  (The session will close after setting the password so they'll need to
+# log in again.)  This was a conscious trade-off between security and
+# usability, and might not be appropriate for all use cases; see the -L option.
+# HUGE WARNING:
+#   On non-Debian systems, edit /etc/pam.d/system-auth-ac and /etc/pam.d/password-auth-ac
+#   and remove the "nullok" keyword.  This prevents other users on the system
+#   from using "su" etc. to switch to the new user without having to put in a
+#   password.
+#   (/etc/pam.d/common-auth on Debian/Ubuntu doesn't suffer from this problem.)
+# WARNING:
+#   It is highly recommended to ensure that /etc/ssh/sshd_config contains
+#   "PermitEmptyPasswords no", which it does by default on most systems.
+#
+# In addition, clowncar will set the user to auto-expire if they still haven't
+# logged in after 3 days.
+# WARNING: This feature might not work on some systems.  It is highly
+# recommended to ensure that the user has set a password.
+#
+# Options:
+#   -L   Create the account with a locked & empty password (default useradd behaviour)
+#   -O <output_filename>     Instead of running the commands, save them to a script file
+#   -V   (debug mode) Displays the command line before execution (amongst other things)
 #
 # Licence:
 #     This program is free software; you can redistribute it and/or modify
@@ -36,7 +80,7 @@ clowncar_factory()
 {
   set_ssh_key
 
-  # wrap args in single quotes.  For each existing single quote within an arg,
+  # Wrap args in single quotes.  For each existing single quote within an arg,
   #   1) end quoting
   #   2) inserted a backslash-quoted single quote
   #   3) restart quoting
@@ -51,10 +95,10 @@ clowncar_factory()
     if [ $debug -gt 0 ] ; then echo "$args" ; fi
   done
 
-  # add the final argument's single quote
+  # Add the final argument's single quote
   args="$args'"
 
-  # splice all info currently held into the output
+  # Splice all info currently held into the output
   sed -e "s%^set_ssh_key$%ssh_key='$ssh_key'%" \
       -e "2 s/clowncar/clowncar_$username/" \
       -e "/^set_ssh_key()/,/^}/ d" \

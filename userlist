@@ -1,7 +1,7 @@
 #! /bin/sh
 # userlist (Bourne shell script) -- list one or all users, with password and expiry info
 #
-# Version: 1.1
+# Version: 1.2
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: users passwd group gecos expiry
 # Licence: This project is released under the GNU General Public License
@@ -71,11 +71,13 @@ Output:
   The Status column is one of: active, disabled, expired.  (Note: This is
   limited in unprivileged mode, and is left out unless verbose mode is active.)
 
-  The Password column is one of: set, locked, LOCKED, BLANK, none.
+  The Password column is one of: set, locked, LOCKED, BLANK, none, old.
+  (Or "future", which only happens if the password age is negative.)
 
   The Remaining, Age, Warn, Min., Max., Grace (a.k.a. inactivity) columns are
   all given in terms of days.  See shadow(5) for more information.
-  Remaining and Age are calculated by userlist, relative to today.
+  Remaining (pertaining to account expiry) and Age (of password) are calculated
+  by userlist, relative to today.
 
 Important info:
   "LOCKED" is a blank password that is locked, which isn't dangerous because
@@ -83,8 +85,10 @@ Important info:
 
   "none" means a specific invalid crypt, used to create the account disabled.
 
-  SSH keys (or other methods), if configured, can be used to log into *any*
-  account with *any* Status (except "expired") or Password state.
+  SSH keys (or other methods), if configured, can be used to log into
+  *any* account with *any* Status (except "expired") or Password state.
+  This assumes that SSH obeys PAM config.  "PermitEmptyPasswords no" won't
+  prevent logins via an SSH key.
 EOT_HELP
 
   exit
@@ -153,14 +157,19 @@ process_users_full()
             \!*) pwstatus=locked ;;
             *)   pwstatus=set ;;
           esac
-          if [ $change_date = 0 ] ; then
-            pw_age=change
-          else
-            pw_age=$(($today - $change_date))
-            if [ $pw_age -lt 0 ] ; then
-              pwstatus=old
-            fi
-          fi
+          case "$change_date" in
+            '') pw_age=N/A ;;
+            0)  pw_age=change ;;
+            *)  pw_age=$(($today - $change_date))
+                # Handle the cases where the password appears to have been
+                # changed in the future, or has expired
+                if [ $pw_age -lt 0 ] ; then
+                  pwstatus=future
+                elif [ $pwstatus = set -a $pw_age -gt $max_age ] ; then
+                  pwstatus=old   ## expired
+                fi
+                ;;
+          esac
 
           # Mark users with * for a crypt as disabled, i.e. can't log in with password
           if [ $pwstatus = none ] ; then
@@ -178,7 +187,7 @@ $status_field_format%11s  %-6s %6s  %5d  %5d  %5d  %5d" \
             ## %8d  %8d  %8d  %12d
             if [ $verbose -ge 1 ] ; then
               printf "$eol  $passwd_field_format" \
-                "${gecos%%,*}" $uid $gid $loginshell $homedir
+                "${gecos%%,*}" $uid $gid "$loginshell" $homedir
               ## # output phone numbers, etc.
               ## if [ $verbose -ge 2 ] ; then
               ##   printf "$eol  " ...
