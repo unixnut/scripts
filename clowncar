@@ -1,7 +1,7 @@
 #! /bin/bash
 # clowncar (BASH script) -- wrapper for useradd that manages SSH public key
 #
-# Version: 1.0
+# Version: 1.1
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: ssh security user
 # Notice: Can cause security weaknesses in some cases.  See Warnings below.
@@ -42,10 +42,9 @@
 #   It is highly recommended to ensure that /etc/ssh/sshd_config contains
 #   "PermitEmptyPasswords no", which it does by default on most systems.
 #
-# In addition, clowncar will set the user to auto-expire if they still haven't
-# logged in after 3 days.
-# WARNING: This feature might not work on some systems.  It is highly
-# recommended to ensure that the user has set a password.
+# WARNING:
+#   It is highly recommended to ensure that the user has logged in (and
+#   therefore been forced to set a password).
 #
 # Options:
 #   -L   Create the account with a locked & empty password (default useradd behaviour)
@@ -70,7 +69,6 @@
 self=$0
 ## ... clowncar
 
-GRACE_PERIOD=3
 USERADD=/usr/sbin/useradd
 
 
@@ -186,9 +184,6 @@ else
     passwd -d $username
     ## passwd -e $username
     chage -d 0 $username
-
-    # auto-expire the user if they still haven't logged in after 3 days
-    chage --inactive=$GRACE_PERIOD $username
   fi
 fi
 
