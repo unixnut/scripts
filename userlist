@@ -1,7 +1,7 @@
 #! /bin/sh
 # userlist (Bourne shell script) -- list one or all users, with password and expiry info
 #
-# Version: 1.2
+# Version: 1.3
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: users passwd group gecos expiry
 # Licence: This project is released under the GNU General Public License
@@ -68,8 +68,12 @@ Options:
   -h, --help    Show this help
 
 Output:
-  The Status column is one of: active, disabled, expired.  (Note: This is
-  limited in unprivileged mode, and is left out unless verbose mode is active.)
+  The Status column is one of: active, disabled, expired.
+  If appropriate, it will show a reason in parentheses:
+    auto means password_age > Max + Grace
+    admin means account has been manually expired by the sysadmin
+  (Note: This column is limited in unprivileged mode, and is left out unless
+  verbose mode is active.)
 
   The Password column is one of: set, locked, LOCKED, BLANK, none, old.
   (Or "future", which only happens if the password age is negative.)
@@ -85,10 +89,10 @@ Important info:
 
   "none" means a specific invalid crypt, used to create the account disabled.
 
-  SSH keys (or other methods), if configured, can be used to log into
+  SSH keys (or other methods, if configured), can be used to log into
   *any* account with *any* Status (except "expired") or Password state.
-  This assumes that SSH obeys PAM config.  "PermitEmptyPasswords no" won't
-  prevent logins via an SSH key.
+  (This assumes that SSH obeys PAM config.  "PermitEmptyPasswords no" won't
+  prevent logins via an SSH key.)
 EOT_HELP
 
   exit
@@ -100,8 +104,8 @@ process_users_full()
 {
   if [ $output_header = y ] ; then
     # $bold and $normal aren't defined unless $colour != no
-    printf "$bold$username_header_format $status_field_format\
-%11s  %s %4s  %5s  %5s  %5s  %5s$normal" \
+    printf "$bold$username_header_format %-10s\
+%9s  %s %4s  %5s  %5s  %5s  %5s$normal" \
       Username Status Remaining Password Age 'Warn' 'Min.' 'Max.' 'Grace'
     ## .. 'Warn for' 'Min. age' 'Max. age' 'Grace period'
     if [ $verbose -ge 1 ] ; then
@@ -125,6 +129,7 @@ process_users_full()
           [ $debug -gt 0 ] && echo "($username $passwd_crypt $change_date $min_age $max_age $warn_days $grace_days $expire_date)" >&2
           # See if the account is active, i.e. unexpired
           status=active     # this is a default
+          status_shown=     # will be set to $status if not set
           if [ -z "$expire_date" ] ; then
             remaining_days=-
           else
@@ -134,7 +139,9 @@ process_users_full()
             # test for special case dates
             if [ $expire_date = 0 -o $expire_date = 1 ] ; then
               # first part appears to be adjacent to the previous column
-              remaining_days="by admin  0"
+              remaining_days=0
+              status=expired
+              status_shown="expired (admin)"
             else
               remaining_days=$(($expire_date - $today))
             fi
@@ -166,7 +173,15 @@ process_users_full()
                 if [ $pw_age -lt 0 ] ; then
                   pwstatus=future
                 elif [ $pwstatus = set -a $pw_age -gt $max_age ] ; then
-                  pwstatus=old   ## expired
+                  pwstatus=old
+                  # Check for the auto-expired state
+                  if [ -z "$grace_days" ] ; then
+                    grace_days=0
+                  fi
+                  if [ $pw_age -gt $(($max_age + $grace_days)) ] ; then
+                    status=expired
+                    status_shown="expired (auto)"
+                  fi
                 fi
                 ;;
           esac
@@ -175,17 +190,21 @@ process_users_full()
           if [ $pwstatus = none ] ; then
             status=disabled
           fi
+          if [ -z "$status_shown" ] ; then
+            status_shown=$status
+          fi
 
           # Only output if conditions match
           if [ $status = "$desired_status" -o \
                -z "$desired_status" -a \
                \( $status != disabled -o $include_sys != none \) ] ; then
             printf "$username_field_format \
-$status_field_format%11s  %-6s %6s  %5d  %5d  %5d  %5d" \
+$status_field_format%4s  %-6s %6s  %5d  %5d  %5d  %5d" \
               "$username" \
-              "$status" "$remaining_days" "$pwstatus" "$pw_age" $warn_days $min_age $max_age $grace_days
+              "$status_shown" "$remaining_days" "$pwstatus" "$pw_age" $warn_days $min_age $max_age $grace_days
             ## %8d  %8d  %8d  %12d
             if [ $verbose -ge 1 ] ; then
+              # Print regular info from the passwd db, but strip phone number etc.
               printf "$eol  $passwd_field_format" \
                 "${gecos%%,*}" $uid $gid "$loginshell" $homedir
               ## # output phone numbers, etc.
@@ -233,6 +252,7 @@ $passwd_header_format$normal" \
       fi
           
       # Print unprivileged mode output, maybe with status if requested.
+      # (Strip phone number etc. from regular info from the passwd db.)
       # Warning: $status can only ever be one word.
       # (It only appears as a printf argument under some circumstances,
       # i.e. sometimes the $() output is nothing, an so can't be quoted.)
@@ -350,7 +370,11 @@ else
     username_field_format="%-16.16s"
   fi
 fi
-status_field_format="%-8s"
+if [ $process_fn = process_users_minimal ] ; then
+  status_field_format="%-8s"
+else
+  status_field_format="%-15s"
+fi
 
 
 # == processing ==
