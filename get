@@ -1,0 +1,15 @@
+#! /bin/bash
+# get (BASH script) -- downloads a PDF into the reading dir
+
+if [[ '$1' != http* && '$1' != ftp* ]] ; then
+  subdir=$1/
+  shift
+fi
+
+if [ -d ~/Reading ] ; then
+  dl_dir=~/Reading/$subdir/
+else
+  dl_dir=~/Desktop/Reading/$subdir/
+fi
+
+wget -N -P "$dl_dir" "$@"
