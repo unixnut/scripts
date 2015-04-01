@@ -52,16 +52,12 @@ $endif$
 $if(graphics)$
 \usepackage{graphicx}
 $endif$
-$if(pdftitle)$
 \usepackage[breaklinks=true,unicode=true,
             pdftex,
             pdftitle={$pdftitle$},
             pdfauthor={$pdfauthor$},
             pdfsubject={$pdfsubject$},
             pdfkeywords={$pdfkeywords$}]{hyperref}
-$else$
-\usepackage[breaklinks=true,unicode=true]{hyperref}
-$endif$
 %# \setuppapersize [A4][A4]
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{6pt plus 2pt minus 1pt}

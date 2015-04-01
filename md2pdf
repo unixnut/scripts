@@ -84,8 +84,14 @@ while [ x"$1" != x-- ] ; do
   case "$1" in
     -p) papersize=$2 ; shift ;;
     -m) margins=$2 ; shift ;;
-    -a|--author)   author_present=y ; metadata_options[${#metadata_options[@]}]="--variable=pdfauthor:$2" ; shift ;;
-    -t|--title)    title_present=y ; metadata_options[${#metadata_options[@]}]="--variable=pdftitle:$2" ; shift ;;
+    -a|--author)
+      author_present=y
+      metadata_options[${#metadata_options[@]}]="--variable=pdfauthor:$2" ; shift
+      ;;
+    -t|--title)
+      title_present=y
+      metadata_options[${#metadata_options[@]}]="--variable=pdftitle:$2" ; shift
+      ;;
     -s|--subject)  metadata_options[${#metadata_options[@]}]="--variable=pdfsubject:$2" ; shift ;;
     -k|--keywords) metadata_options[${#metadata_options[@]}]="--variable=pdfkeywords:$2" ; shift ;;
     -h|--help) show_help ; exit ;;
@@ -116,9 +122,9 @@ shift       # get rid of the "--"
 
 
 # == sanity checking ==
-if [ x$title_present != xy -a ${#metadata_options[@]} -ge 1 ] ; then
-  echo "${self}: Warning: PDF title not specified; ignoring other metadata." >&2
-fi
+## if [ x$title_present != xy -a ${#metadata_options[@]} -ge 1 ] ; then
+##   echo "${self}: Warning: PDF title not specified; ignoring other metadata." >&2
+## fi
 
 
 # == preparation ==
