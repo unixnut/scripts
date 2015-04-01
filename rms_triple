@@ -1,0 +1,8 @@
+#! /bin/sh
+# rms_triple (Bourne shell script) -- calculates Root Mean Square of two 3-tuples
+#
+# Usage: rms_triple a1 b1 c1 a2 b2 c2
+
+scale=2
+
+echo "$scale k $1 $4 - 2 ^ $2 $5 - 2 ^ $3 $6 - 2^ ++ v p" | dc

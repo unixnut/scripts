@@ -9,9 +9,11 @@
 # Version: 0.9.3
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: git svn hg source-control wrapper
-# Licence: This project is released under the GNU General Public License
+# Requires: bash v4.0+
+# Licence: This file is released under the GNU General Public License
 #
-# Licence:
+#
+# Licence details:
 #     This program is free software; you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
 #     the Free Software Foundation; either version 2 of the License, or (at
@@ -333,6 +335,19 @@ dir_only()
 
 
 # *** MAINLINE ***
+# == dependency checks ==
+if [ -z "$BASH_VERSION" ] ; then
+  echo "${self}: Error: script must be run as a program" >&2
+  exit 4
+else
+  if (( BASH_VERSINFO[0] < 4 || BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 1)) ; then
+    echo "${self}: Error: bash v4.0+ required" >&2
+    exit 4
+  fi
+fi
+
+
+# == initialisation ==
 # Fill the associative arrays (one for each repo type), mapping actions to commands.
 # (_s.sh contains mappings generated from the docs by Makefile.)
 declare -A r_git r_svn r_hg

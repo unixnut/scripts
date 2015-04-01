@@ -5,8 +5,9 @@
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: ssh security user
 # Notice: Can cause security weaknesses in some cases.  See Warnings below.
-# Licence: This project is released under the GNU General Public License
+# Licence: This file is released under the GNU General Public License
 #
+# Description:
 # clowncar accepts all useradd options, and a few of its own (which must come
 # first on the command line).  In addition, it accepts an SSH public key on
 # standard input.  This is prompted for if stdin is a terminal.
@@ -51,7 +52,8 @@
 #   -O <output_filename>     Instead of running the commands, save them to a script file
 #   -V   (debug mode) Displays the command line before execution (amongst other things)
 #
-# Licence:
+#
+# Licence details:
 #     This program is free software; you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
 #     the Free Software Foundation; either version 2 of the License, or (at

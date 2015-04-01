@@ -1,15 +1,15 @@
 #! /bin/bash
 # get (BASH script) -- downloads a PDF into the reading dir
 
-if [[ '$1' != http* && '$1' != ftp* ]] ; then
-  subdir=$1/
-  shift
+if [ -d ~/Reading ] ; then
+  reading_dir=~/Reading
+else
+  reading_dir=~/Desktop/Reading
 fi
 
-if [ -d ~/Reading ] ; then
-  dl_dir=~/Reading/$subdir/
-else
-  dl_dir=~/Desktop/Reading/$subdir/
+if [[ "$1" != http* && "$1" != ftp* && "$1" != www* && -d "$reading_dir/$1" ]] ; then
+  dl_dir=$reading_dir/$1
+  shift
 fi
 
 wget -N -P "$dl_dir" "$@"

@@ -9,6 +9,7 @@
 
 host=vega
 source=andromeda.cacheboy.net:/backups/$host
+## source=tarantula:/backups/$host
 dl_date=$(date +%Y%m%d)
 tmpdir=/var/tmp/duplicty_$host
 tardest=/media/usb/backup/$host

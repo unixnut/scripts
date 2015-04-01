@@ -4,7 +4,7 @@
 # Version: 0.6
 # Copyright: (c) 2015 Alastair Irvine <alastair@plug.org.au>
 # Keywords: hostname
-# Licence: This project is released under the GNU General Public License
+# Licence: This file is released under the GNU General Public License
 #
 # See show_help() for usage.
 #
@@ -12,6 +12,23 @@
 #   + https://wiki.debian.org/HowTo/ChangeHostname
 #   + http://www.itzgeek.com/how-tos/linux/centos-how-tos/change-hostname-in-centos-7-rhel-7.html#axzz3PFs3EXN8 
 #   + http://www.cyberciti.biz/faq/centos-hostname-change-command-line/ 
+#   
+#
+# Licence details:
+#     This program is free software; you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation; either version 2 of the License, or (at
+#     your option) any later version.
+#
+#     See http://www.gnu.org/licenses/gpl-2.0.html for more information.
+#
+#     You can find the complete text of the GPLv2 in the file
+#     /usr/share/common-licenses/GPL-2 on Debian systems.
+#     Or see the file COPYING in the same directory as this program.
+#
+#
+# TO-DO:
+#  + look for "name ...." in /var/lib/bluetooth/11:11:11:11:11:11/config
 
 ## /bin/hostnamectl set-hostname --static <x>
 

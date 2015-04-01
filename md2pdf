@@ -1,0 +1,146 @@
+#! /bin/bash
+# md2pdf (BASH script) -- generates a PDF file with metadata and correct paper size
+#
+# Version: 1.0
+# Copyright: (c)2015 Alastair Irvine <alastair@plug.org.au>
+# Keywords: pdf pandoc tex latex markdown2pdf metadata title
+# Licence: This file is released under the GNU General Public License
+#
+# Description:
+#   This is a wrapper around markdown2pdf.  It uses a LaTeX template file
+#   (based on the one from pandoc v1.5.1.1) called include/pdf_template.tex
+#   that uses the TeX geometry and hyperref packages.
+#
+# Usage: md2pdf [-p <papersize>] [-m <margins>] \
+#          [ -a <pdfauthor>   | --author=<pdfauthor> ] \
+#          [ -t <pdftitle>    | --title=<pdftitle> ] \
+#          [ -s <pdfsubject>  | --subject=<pdfsubject> ] \
+#          [ -k <pdfkeywords> | --keywords=<pdfkeywords> ]
+#          
+# Options:
+#   -p <papersize>      <papersize> is a4, letter, etc.
+#   -g <margins>        <margins> is either a distance e.g. "2in" or "1.4cm" or
+#                       a set of margins, e.g. "left=2cm,bottom=5cm"
+#   -t <pdftitle>       This is required for the other metadata options to work
+#
+#   If -p is not specified, /etc/papersize is read and used.
+#   If <pdfauthor> is not specified, the logged in user's full name is used.
+#
+#
+# Licence details:
+#     This program is free software; you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation; either version 2 of the License, or (at
+#     your option) any later version.
+#
+#     See http://www.gnu.org/licenses/gpl-2.0.html for more information.
+#
+#     You can find the complete text of the GPLv2 in the file
+#     /usr/share/common-licenses/GPL-2 on Debian systems.
+#     Or see the file COPYING in the same directory as this program.
+#
+#
+# TO-DO: 
+
+self=`basename "$0"`
+allowed_options=hp:m:a:t:s:k:f:r:o:RNV:H:B:A:CS
+allowed_long_options=help,from:,read:,output:,strict,parse-raw,xetex,number-sections,toc,table-of-contents,smart,author:,title:,subject:,keywords:
+
+
+# *** FUNCTIONS ***
+show_help()
+{
+  cat << EOT_HELP
+${self}: No help yet.
+
+EOT_HELP
+
+  markdown2pdf --help
+}
+
+
+
+# *** MAINLINE ***
+# == command-line parsing ==
+declare -a metadata_options
+
+# -- defaults --
+debug=0
+verbose=0
+if [ -f /etc/papersize ] ; then
+  papersize=$(cat /etc/papersize)
+else
+  papersize=letter
+fi
+
+# -- option handling --
+set -e
+orthogonal_opts=$(getopt --shell=sh --name=$self \
+  --options=+$allowed_options --longoptions=$allowed_long_options -- "$@")
+eval set -- "$orthogonal_opts"
+set +e      # getopt would have already reported the error
+
+while [ x"$1" != x-- ] ; do
+  case "$1" in
+    -p) papersize=$2 ; shift ;;
+    -m) margins=$2 ; shift ;;
+    -a|--author)   author_present=y ; metadata_options[${#metadata_options[@]}]="--variable=pdfauthor:$2" ; shift ;;
+    -t|--title)    title_present=y ; metadata_options[${#metadata_options[@]}]="--variable=pdftitle:$2" ; shift ;;
+    -s|--subject)  metadata_options[${#metadata_options[@]}]="--variable=pdfsubject:$2" ; shift ;;
+    -k|--keywords) metadata_options[${#metadata_options[@]}]="--variable=pdfkeywords:$2" ; shift ;;
+    -h|--help) show_help ; exit ;;
+    -1) echo "${self}: Warning: Blah blah blah feature unsupported" >&2 ;;
+    --strict|-R|--parse-raw|--xetex|-N|--number-sections|--toc|--table-of-contents|-S|--smart)
+      # passthru long or short option without argument
+      passthru_options[${#passthru_options[@]}]=$1 
+      ;;
+    --*) # passthru long option with argument
+      passthru_options[${#passthru_options[@]}]="$1=$2" 
+      shift
+      ;;
+    *) # passthru short option with argument
+      passthru_options[${#passthru_options[@]}]=$1
+      passthru_options[${#passthru_options[@]}]=$2
+      shift
+      ;;
+  esac
+  shift       # get rid of the option (or its arg if the inner shift already got rid it)
+done
+shift       # get rid of the "--"
+
+# -- argument checking --
+## if [ $# != 2 -a $# != 3 ] ; then
+##   echo "Usage: $self ..." >&2
+##   exit 1
+## fi
+
+
+# == sanity checking ==
+if [ x$title_present != xy -a ${#metadata_options[@]} -ge 1 ] ; then
+  echo "${self}: Warning: PDF title not specified; ignoring other metadata." >&2
+fi
+
+
+# == preparation ==
+geometry_options="-V geometry:${papersize}paper"
+if [ -n "$margins" ] ; then
+  # check for and handle a numeric margin
+  if [[ "$margins" == [0-9.]* ]] ; then
+    geometry_options=$geometry_options,margin=$margins
+  else
+    geometry_options=$geometry_options,$margins
+  fi
+fi
+
+if [ -z "${author_present+isset}" ] ; then
+  # Use full name of logged in user (from the passwd db), but strip phone number etc.
+  author_gecos=$(getent passwd "$LOGNAME" | cut -d: -f5)
+  metadata_options[${#metadata_options[@]}]="--variable=pdfauthor:${author_gecos%%,*}"
+fi
+
+
+# == processing ==
+markdown2pdf $geometry_options \
+  "${metadata_options[@]}" \
+  --template="$(dirname "$0")/include/pdf_template.tex" \
+  "${passthru_options[@]}" "$@"

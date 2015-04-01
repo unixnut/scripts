@@ -1,0 +1,20 @@
+#! /bin/sh
+# sizedelta (Bourne shell script) -- Shows the change in size of a file
+# Leaves a text file with the same name but a .info extension containing the
+# size (and optionally other info), which is used by the next run.
+# 
+# TO-DO: option to show size as well as delta
+
+delta_file=$1.info
+new_size=$(stat -c %s "$1")
+
+if [ -f "$delta_file" ] ; then
+  old_size=$(awk '$1 == "size:" { print $2 }' "$delta_file")
+  delta=$((new_size - old_size))
+  printf '%+d\n' $delta
+else
+  echo "sizedelta: initialising."
+fi
+
+# This re-writes the file
+echo "size: $new_size" > "$delta_file"
