@@ -10,6 +10,8 @@ fi
 if [[ "$1" != http* && "$1" != ftp* && "$1" != www* && -d "$reading_dir/$1" ]] ; then
   dl_dir=$reading_dir/$1
   shift
+else
+  dl_dir=$reading_dir
 fi
 
 wget -N -P "$dl_dir" "$@"
