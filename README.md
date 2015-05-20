@@ -9,3 +9,4 @@ Highlights
   SSH public key.  It can be run in order to create a user immediately, or be
   run in "clowncar factory mode" to create a script that will create the user
   later.  In either case it prompts for a key.
+* **[smooth](smooth)**: Unified wrapper for various source control systems.  Assumes collaborative workflow.  [Full documentation](doc/s for smooth source control.md)
