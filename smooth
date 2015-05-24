@@ -3,10 +3,11 @@
 #
 # See [instructions](doc/s for smooth source control.md) for usage.
 # Options:
-#   -s      (Git only) Commit the staged files (i.e. the cache) 
+#   -s      (Git only) Commit the staged files (i.e. the cache)
 #   -d      Debug mode; for smooth developers only.
+#   -q      quiet mode; don't report the top level working directory
 #
-# Version: 0.9.3
+# Version: 1.0.0
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: git svn hg source-control wrapper
 # Requires: bash v4.0+
@@ -27,11 +28,62 @@
 #
 #
 # TO-DO:
-#   + pipe output for svn
-#   + accept -s for 'diff'
+#   + pipe output for svn (when $action is like [dl]*, dispatch should pipe through less or `vim -`)
 
-self=$(basename $0)
-allowed_options=ds
+self=$(basename "$0")
+allowed_options=dsqC
+allowed_long_options=quiet
+
+
+# *** FUNCTIONS ***
+svn_uuid()
+{
+  svn info "$1" | awk '/^Repository UUID:/ { print $3 }'
+}
+
+
+# Evaluate successively higher candidate directories until the base of the
+# working tree for the current repo is found
+svn_toplevel()
+{
+  local toplevel dir=$(readlink -f "${1-.}")
+
+  # start at arg (or $PWD) and work up the tree
+  while [ $dir != / ] ; do
+    # if the dir is a working copy, it's a candidate for the toplevel
+    if [ -d "$dir/.svn" ] ; then
+      # if there hasn't been a candidate before, flag this dir straightaway
+      if [ -z "$toplevel" ] ; then
+        toplevel=$dir
+      else
+        # but if there is a candidate, do the magic test: see if there's a
+        # change in repo UUID
+        if [ $(svn-uuid "$dir") = $(svn-uuid "$toplevel") ] ; then
+          # if no change, appoint a new candidate
+          toplevel=$dir
+        else
+          # if the UUID changed, accept the current candidate
+          break
+        fi
+      fi
+    elif [ -n "$toplevel" ] ; then
+      # if the dir isn't an SVN working copy, and there's a candidate, accept it
+      # (can assume we've ascended too far)
+      break
+    fi
+
+    # prepare for the next loop iteration
+    prev_dir=$dir
+    dir=$(dirname "$dir")
+  done
+
+  # go with the most recent candidate or return an error if there isn't one
+  if [ -n "$toplevel" ] ; then
+    echo "$toplevel"
+  else
+    return 2
+  fi
+}
 
 
 git_current_branch()
@@ -233,14 +285,22 @@ not_implemented()
 dispatch_debug()
 {
   pwd
-  eval echo \${r_$rtype[$action]}
+  eval echo \${r_$1[$action]}
+  shift
   echo "$@"
   echo --------
 }
 
 
+# Usage: dispatch <rtype> <arg> ...
 dispatch()
 {
+  local rtype=$1
+  shift
+
+  if [ $quiet = n ] ; then
+    echo "${bold}$PWD${normal} ($rtype):"
+  fi
   if [ -z "$(eval echo \${r_$rtype[$action]})" ] ; then
     echo "smooth: ERROR: action '$action' not supported for $rtype" >&2
     exit 4
@@ -254,7 +314,7 @@ dispatch()
 
 # Handle option if present (and hope pass-through options don't overlap with
 # options taken by individual functions).
-# Then immediately starts the next cycle of the loop that called this funciton.
+# Then immediately starts the next cycle of the loop that called this function.
 maybe_store_option()
 {
   if [ "$no_more_options" != y ] ; then
@@ -270,16 +330,21 @@ maybe_store_option()
 
 # Queries the arg (a relative directory) to see if it belongs to a work tree.
 # If so, set $toplevel and $rtype.  If not, exit with an error message & code.
-# Assumes that .svn has already been tested for.
 set_toplevel()
 {
-  if toplevel=$(cd "$1" && git rev-parse --show-toplevel 2> /dev/null) ; then
+  # test for .svn first, and last (to account for un-added subdirectories)
+  if [ -d "$1"/.svn ] ; then
+    rtype=svn
+    toplevel=$(svn_toplevel "$1")
+  elif toplevel=$(cd "$1" && git rev-parse --show-toplevel 2> /dev/null) ; then
     # TO-DO: see what happens with submodules
     rtype=git
   elif toplevel=$(cd "$1" && hg root 2> /dev/null) ; then
     rtype=hg
+  elif toplevel=$(svn_toplevel "$1") ; then
+    rtype=svn
   else
-    echo "smooth: ERROR: no revision control directory found in $PWD or parents" >&2
+    echo "smooth: ERROR: no revision control directory found in $1 or parents" >&2
     exit 3
   fi
 }
@@ -301,19 +366,26 @@ maybe_clear_args()
 maybe_start_arggroup()
 {
   # If the action is 'move' (which doesn't use multiple arg groups), only
-  # handle the first one.
+  # handle the first one (i.e. set toplevel and instead just let the args up.
   if [[ $action != [m]* || -z "$prev_toplevel" ]] ; then
     set_toplevel "$1"
 
-    # Try to identify the start of a new group other than the first
-    if [ -n "$prev_toplevel" -a "$toplevel" != "$prev_toplevel" ] ; then
-      maybe_clear_args
-      # Dispatch previous group of args (or just the toplevel)
-      (cd "$toplevel" && $dispatch "${args[@]}")
+    # Check if the arg represents a new or changed toplevel
+    if [ "$toplevel" != "$prev_toplevel" ] ; then
+      # Try to identify the start of a new group other than the first
+      if [ -n "$prev_toplevel" ] ; then
+        maybe_clear_args
+        # Dispatch previous group of args
+        (cd "$prev_toplevel" && $dispatch $prev_rtype "${args[@]}")
 
-      # Start the next arg group
+        # Start the next arg group
+        args=()
+      fi
+
+      # Store information needed by the next call of this function that will be
+      # overwritten by its set_toplevel() call
       prev_toplevel=$toplevel
-      args=()
+      prev_rtype=$rtype
     fi
   fi
 }
@@ -407,7 +479,19 @@ esac
 
 # -- defaults --
 debug=0
+quiet=n
 git_use_staged=n
+if [ -t 1 ] ; then
+  # by default, only use colour if stdout is a terminal
+  colour=y
+
+  # also, suppress headings for toplevel when git etc. will use a pager
+  if [[ $action == [dl]* ]] ; then
+    quiet=y
+  fi
+else
+  colour=n
+fi
 
 # -- option handling --
 set -e
@@ -428,6 +512,8 @@ while [ x"$1" != x-- ] ; do
   case "$1" in
     -d) debug=$((debug + 1)) ;;
     -s) git_use_staged=y ;;
+    -q|--quiet) quiet=y ;;
+    -C) colour=y ;;
   esac
   shift       # get rid of the option (or its arg if the inner shift already got rid it)
 done
@@ -469,6 +555,12 @@ else
   dispatch=dispatch_debug
 fi
 
+if [ $colour = y ] ; then
+  bold=$(setterm -bold on)
+  normal=$(setterm -bold off)
+fi
+
+
 if [[ $action == d* && $git_use_staged = y ]] ; then
 ##  case $rtype in
 ##    git)
@@ -489,138 +581,104 @@ fi
 declare -a args
 args=()
 
-# This is only used for SVN testing
-if [ $# -eq 0 ] ; then
-  dir=.
-else
-  dir=$(dir_only "$1")
-fi
+# -- Identify separate arg groups --
 
-## echo "start: $dir"
-## echo --------
+# These might be useful:
+#   git rev-parse --is-inside-work-tree
+#   git rev-parse --show-prefix
+#     (returns the local path under the git repo root. (empty if you are at the git repo root))
 
-if [ -d "$dir/.svn" ] ; then
-  # Note: grouping doesn't work for svn; it's assumed there is only one group.
-  rtype=svn
-  # Strip the path prefix off all the args.  This will only work properly if all
-  # the files in the same directory or if the highest-level path comes first.
-  # TO-DO: Find common parents in order to do group splitting like for git & hg
-  for arg ; do
-    maybe_store_option "$arg"   # Might start the next loop cycle
-
-    sub_arg=${arg#$dir/}
-    # Check that something was stripped.  If not then the above rule doesn't hold.
-    if [ "$dir" != . -a "$sub_arg" = "$arg" ] ; then
-      echo "smooth: ERROR: relative SVN craziness" >&2
-      exit 6
+case $action in
+  [e]*) # 'empty' (repo creation)
+    if [ $# -eq 0 ] ; then
+      echo "smooth: ERROR: repo type needed" >&2
+      exit 7
     fi
-    args[${#args[@]}]=$sub_arg
-  done
+    rtype=$1
+    shift
 
-  (cd "$dir" && $dispatch "${args[@]}")
-else
-  # Check for git and/or hg (separate arg groups)
+    $dispatch $rtype "$@"
+    ;;
 
-  # These might be useful:
-  #   git rev-parse --is-inside-work-tree
-  #   git rev-parse --show-prefix
-  #     (returns the local path under the git repo root. (empty if you are at the git repo root))
+  i*) # 'init' (repo creation)
+    url=$1
+    case $url in
+      git://|*\.git|https://git*|http://git*) rtype=git ;;
+      svn+ssh:*|http://*/svn/*) rtype=svn ;;
+      *) rtype=hg ;;
+    esac
 
-  case $action in
-    [e]*) # 'empty' (repo creation)
-      if [ $# -eq 0 ] ; then
-        echo "smooth: ERROR: repo type needed" >&2
-        exit 7
-      fi
-      rtype=$1
-      shift
+    # check if the last argument is an existing directory
+    if [ -d "${@: -1}" ] ; then
+      # If it was, cd into it and don't pass it to dispatch()
 
-      $dispatch "$@"
-      ;;
+      echo "smooth: Changing directory to ${@: -1}"
+      cd "${@: -1}"
 
-    i*) # 'init' (repo creation)
-      url=$1
-      case $url in
-        git://|*\.git|https://github*|http://github*) rtype=git ;;
-        svn+ssh:*|http://*/svn/*) rtype=svn ;;
-        *) rtype=hg ;;
-      esac
+      # strip off all but the last argument when calling dispatch()
+      let num_subtract_one=$(($# - 1))
+      $dispatch $rtype "${@:1:$num_subtract_one}"
+    else
+      # Otherwise, assume that no directory was given or that the last
+      # argument is the directory to be created
+      $dispatch $rtype "$@"
+    fi
+    ;;
 
-      # check if the last argument is an existing directory
-      if [ -d "${@: -1}" ] ; then
-        # If it was, cd into it and don't pass it to dispatch()
+  n*) # 'new-tag*'
+    # Usage: s new-tag [<option>...] <dir> <tagname> [<commit> | <object>]
+    for arg ; do
+      maybe_store_option "$arg"   # Might start the next loop cycle
 
-        echo "smooth: Changing directory to ${@: -1}"
-        cd "${@: -1}"
-
-        # strip off all but the last argument when calling dispatch()
-        let num_subtract_one=$(($# - 1))
-        $dispatch "${@:1:$num_subtract_one}"
-      else
-        # Otherwise, assume that no directory was given or that the last
-        # argument is the directory to be created
-        $dispatch "$@"
-      fi
-      ;;
-
-    n*) # 'new-tag*'
-      # Usage: s new-tag [<option>...] <dir> <tagname> [<commit> | <object>]
-      for arg ; do
-        maybe_store_option "$arg"   # Might start the next loop cycle
-
-        # Set the toplevel based on the first non-option arg, but otherwise ignore it.
-        if [ -z "$toplevel" ] ; then
-          if [ ! -e "$arg" ] ; then
-            echo "smooth: ERROR: '$arg' does not exist" >&2
-            exit 2
-          fi
-          set_toplevel "$(dir_only "$arg")"
-        else
-          # Assumes that the second non-option arg is the tag name
-          if [ -z "$tagname" ] ; then
-            tagname=$arg
-          fi
-          args[${#args[@]}]=$arg
-        fi
-      done
-
-      (cd "$toplevel" && $dispatch "${args[@]}")
-      ;;
-
-    *)
-      for arg ; do
-        maybe_store_option "$arg"   # Might start the next cycle
-
+      # Set the toplevel based on the first non-option arg, but otherwise ignore it.
+      if [ -z "$toplevel" ] ; then
         if [ ! -e "$arg" ] ; then
           echo "smooth: ERROR: '$arg' does not exist" >&2
           exit 2
         fi
-
-        maybe_start_arggroup "$(dir_only "$arg")"
-
-        # Append the current argument to the existing or new list, but first
-        # strip off the part of the path between the current directory and the toplevel
-        # FIXME: readlink translates symlinks to referents
-        arg_fullpath=$(readlink -f "$arg")
-        if [ "$arg_fullpath" = "$toplevel" ] ; then
-          args[${#args[@]}]=.
-        else
-          args[${#args[@]}]=${arg_fullpath#$toplevel/}
-        fi
-      done
-
-      # set a default in case there were no args or the action takes non-file/dir args
-      if [ $# -eq 0 ] ; then
-        set_toplevel .
+        set_toplevel "$(dir_only "$arg")"
       else
-        maybe_clear_args
+        # Assumes that the second non-option arg is the tag name
+        if [ -z "$tagname" ] ; then
+          tagname=$arg
+        fi
+        args[${#args[@]}]=$arg
+      fi
+    done
+
+    (cd "$toplevel" && $dispatch $rtype "${args[@]}")
+    ;;
+
+  *)
+    for arg ; do
+      maybe_store_option "$arg"   # Might start the next cycle
+
+      if [ ! -e "$arg" ] ; then
+        echo "smooth: ERROR: '$arg' does not exist" >&2
+        exit 2
       fi
 
-      # Dispatch final group of args, if any
-      (cd "$toplevel" && $dispatch "${args[@]}")
-      ;;
-  esac
+      maybe_start_arggroup "$(dir_only "$arg")"
 
-  ## if [ ${#args[@]} != 0 ] ; then
-  ## fi
-fi
+      # Append the current argument to the existing or new list, but first
+      # strip off the part of the path between the current directory and the toplevel
+      # FIXME: readlink translates symlinks to referents
+      arg_fullpath=$(readlink -f "$arg")
+      if [ "$arg_fullpath" = "$toplevel" ] ; then
+        args[${#args[@]}]=.
+      else
+        args[${#args[@]}]=${arg_fullpath#$toplevel/}
+      fi
+    done
+
+    # set a default in case there were no args or the action takes non-file/dir args
+    if [ $# -eq 0 ] ; then
+      set_toplevel .
+    else
+      maybe_clear_args
+    fi
+
+    # Dispatch final group of args, if any
+    (cd "$toplevel" && $dispatch $rtype "${args[@]}")
+    ;;
+esac
