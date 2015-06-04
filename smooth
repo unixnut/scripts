@@ -58,7 +58,7 @@ svn_toplevel()
       else
         # but if there is a candidate, do the magic test: see if there's a
         # change in repo UUID
-        if [ $(svn-uuid "$dir") = $(svn-uuid "$toplevel") ] ; then
+        if [ $(svn_uuid "$dir") = $(svn_uuid "$toplevel") ] ; then
           # if no change, appoint a new candidate
           toplevel=$dir
         else
