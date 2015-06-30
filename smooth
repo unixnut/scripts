@@ -7,7 +7,7 @@
 #   -d      Debug mode; for smooth developers only.
 #   -q      quiet mode; don't report the top level working directory
 #
-# Version: 1.0.0
+# Version: 1.1.0
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: git svn hg source-control wrapper
 # Requires: bash v4.0+
@@ -182,6 +182,18 @@ git_push_tag()
 }
 
 
+git_object_dump()
+{
+  git show $branch
+}
+
+
+git_print_tags()
+{
+  git show-ref --tags $branch
+}
+
+
 # Internal use only
 git_do_commit()
 {
@@ -353,7 +365,8 @@ set_toplevel()
 # File/dir args don't make sense for some actions.
 maybe_clear_args()
 {
-  # 'transfer', 'jump', 'branch', 'update' and 'here' don't take args; only $PWD is important
+  # The following actions don't take args; only $PWD is important:
+  #   'transfer', 'jump', 'branch', 'update', 'here', 'print-tags', 'object-dump'
   if [[ $action == [tjbuh]* ]] ; then
     args=()
   fi
@@ -455,6 +468,10 @@ r_git[transfer]="git_transfer"
 r_git[t]="git_transfer"
 r_git[stage]="git add --all"
 r_git[g]="git add --all"
+r_git[p]=git_print_tags
+r_git[print-tags]=git_print_tags
+r_git[od]=git_object_dump
+r_git[object-dump]=git_object_dump
 
 
 # == Command-line parsing ==
@@ -486,7 +503,7 @@ if [ -t 1 ] ; then
   colour=y
 
   # also, suppress headings for toplevel when git etc. will use a pager
-  if [[ $action == [dl]* ]] ; then
+  if [[ $action == [dlo]* ]] ; then
     quiet=y
   fi
 else
@@ -531,11 +548,12 @@ if [[ "$1" == *[^/]..[^/]* || "$1" == ..[^/]* || "$1" == *[^/].. ]] ; then
 fi
 
 # Check for a branch name for 'transfer', 'jump' or 'here'.
-# For 'jump', the first arg is always a branch name.
-# For 'transfer' or 'here', the first arg is only a branch name if followed by "--".
-if [[ $action == [tjh]* ]] ; then
+# For 'jump' and 'object-dump', the first arg is always a branch name.
+# For 'transfer', 'print-tags' or 'here', the first arg is only a branch name
+# if followed by "--".
+if [[ $action == [tjhpo]* ]] ; then
   [ $debug -ge 2 ] && echo '$#:' $# action: $action '$2:' $2
-  if [[ $action != [ht]* || ( $# -ge 2 && "x$2" == "x--" ) ]] ; then
+  if [[ $action != [htp]* || ( $# -ge 2 && "x$2" == "x--" ) ]] ; then
     # For some actions, this won't be done unless "--" is the second arg
     # (signifying that the first arg is a branch name).
     [ $debug -ge 1 ] && echo "(setting branch to $1)"
