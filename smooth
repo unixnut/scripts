@@ -190,7 +190,7 @@ git_object_dump()
 
 git_print_tags()
 {
-  git show-ref --tags $branch
+  git show-ref --tags $branch | sed 's@refs/tags/@@'
 }
 
 
