@@ -4,6 +4,7 @@
 .*.sw?
 ## *.desktop
 *.old
+*.bak
 
 Classes/
 RCS/
