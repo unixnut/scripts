@@ -64,13 +64,15 @@ name.
 | `s **ll**` (log-long)  | `svn log --verbose`   | `git log --stat` | `hg log` | | |
 | `s **lf**` (log-full) | N/A   | `git log --patch` | `hg log -p` | | |
 | `s **lff**` (log-veryfull) | N/A | `git log --patch --full-diff` | ? | | |
+| `s **p**rint-tags`  | N/A | `git show-ref --tags`      | `hg tags` | | |
+| `s **od**` (object-dump)  | N/A | `git show`      | `hg ` | | |
 | `s **f**orget`   | `svn rm --keep-local`  | `git reset HEAD` | `hg forget` | | |
 | `s **fp**` (forget-patch)   | N/A  | `git reset --patch HEAD` | N/A | | |
 | `s **j**ump`  | `svn -r`     | `git_smart_jump` | `hg update -r` | | |
 | `s **z**` (undo)   | `echo carefully use 'svn revert'`  | `git reset --soft` | `hg rollback` | | |
 
 template: | `s ****`  | `svn `  | `git `      | `hg ` | | |
-<br>Unused command shortcuts: `kopxy`
+<br>Unused command shortcuts: `kxy`
 
 Merging and Tagging are deliberately ignored for now.
 
