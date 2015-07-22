@@ -8,8 +8,8 @@
 # there might be more than one set files.
 
 host=vega
-source=andromeda.cacheboy.net:/backups/$host
-## source=tarantula:/backups/$host
+## source=andromeda.cacheboy.net:/backups/$host
+source=tarantula:/backups/$host
 dl_date=$(date +%Y%m%d)
 tmpdir=/var/tmp/duplicty_$host
 tardest=/media/usb/backup/$host
@@ -26,5 +26,5 @@ if [ -d $tardest ] ; then
   if [ -f $tardest/list ] ; then cp -p $tardest/list $tardest/list.old ; fi
   tar cf $tardest/duplicity_$dl_date.tar --listed-incremental=$tardest/list "$@" -C $tmpdir .
 else
-  echo Warning: $tardest not present
+  echo Error: $tardest not present
 fi
