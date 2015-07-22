@@ -1,0 +1,104 @@
+#! /usr/bin/python
+# quotewrap (Python script) -- wraps a (multi-part) quote, indenting attribution
+
+import textwrap
+import re
+import sys
+
+
+# max line lenght, not including dots / 4 space indent
+MAX_LEN = 70
+ATTRIBUTION_OVERFLOW = 7
+
+
+# *** CLASSES ***
+class NoAttributionContingency(Exception):
+    pass
+
+
+# *** FUNCTIONS ***
+# Wrap a paragraph, handling the attribution sensibly (indenting it if necessary).
+# Returns a list of lines
+def handle_para(p, basic_initial_indent, basic_subsequent_indent, max_line_length):
+    # If the paragraph starts with a double (but not single) quote character,
+    # indent the rest of the lines by one more space
+    if p[0] == "\"":
+        subsequent_indent = basic_subsequent_indent + " "
+    else:
+        subsequent_indent = basic_subsequent_indent
+
+    w = textwrap.TextWrapper(width=max_line_length,
+                             initial_indent=basic_initial_indent,
+                             subsequent_indent=subsequent_indent)
+    if len(p) > max_line_length:
+        try:
+            # Look for attribution and attempt to split there
+            # (use a lookbehind assertion to ensure the hyphens are preceded by
+            # a double quote)
+            try:
+                (q, a) = re.split(r'(?<=") -- ', p)
+            except ValueError, e:
+                raise NoAttributionContingency()
+            qlines = w.wrap(q)
+
+            # Check if the attribution can fit on the last line
+            # (Allowing the attribution to go a bit past the column limit)
+            if len(qlines[-1] + " -- " + a) <= max_line_length + ATTRIBUTION_OVERFLOW:
+                qlines[-1] += " -- " + a
+                return qlines
+            else:
+                longest_line_length = max(len(x) for x in qlines)
+
+                # Indent the attribution (make the 2/3 point of the attribution
+                # line up with the 2/3 point of the longest line in this para)
+                a_indent = (longest_line_length * 2 / 3) - (len(a) * 2 / 3)
+                if a_indent < 4:
+                    a_indent = 6
+                # FIXME: handle multi-line attributions
+                aw = textwrap.TextWrapper(width=max_line_length,
+                                          initial_indent=" "*a_indent+"-- ",
+                                          subsequent_indent=" "*a_indent+"   ")
+
+                return qlines + aw.wrap(a)
+        except NoAttributionContingency, e:
+            # didn't get more than 1 value to unpack, so there is no attribution
+            return w.wrap(p)
+
+    else:
+        # No line wrapping needed, but indent has to be added
+        return w.wrap(p)
+
+
+# Iterate over the paragraph, shrinking the max_line_length by 1 each time, until
+# the line count increases.  Then return the penultimate iteration.
+def smart_handle_para(p, basic_initial_indent, basic_subsequent_indent):
+    latest = None
+    current_count = 0
+    max_line_length = MAX_LEN
+    while True:
+        prev = latest
+        latest = handle_para(p, basic_initial_indent, basic_subsequent_indent, max_line_length)
+        if current_count > 0 and len(latest) > current_count:
+            return prev
+        else:
+            current_count = len(latest)
+            max_line_length -= 1
+
+
+def handle(s):
+    # Assumes different paragraphs are separated by double space,
+    # so long as it's followed by a double quote (which is left intact)
+    paras=re.split(r'  (?=")', s)
+    ## print paras
+    print "\n".join(smart_handle_para(paras[0], "... ", "    "))
+
+    # Use a different initial_indent for the remainder of the paras
+    if len(paras) > 1:
+        for para in paras[1:]:
+            print "\n".join(smart_handle_para(para, "    ", "    "))
+
+
+# *** MAINLINE ***
+for line in sys.stdin.readlines():
+    # Strip the dots from the start of the line and the newline from the end
+    handle(re.sub(r"^\.\.\. ", "", line.rstrip()))
