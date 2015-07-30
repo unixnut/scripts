@@ -317,10 +317,13 @@ dispatch()
     echo "smooth: ERROR: action '$action' not supported for $rtype" >&2
     exit 4
   fi
+
   ## set -x
-  eval \${r_$rtype[$action]} \
-    $(if [ $rtype = svn -a -n "$revs" ] ; then echo -r ${revs/../:} ; else echo $revs ; fi) \
-    '"$@"'
+  [ $debug -ge 2 ] && eval echo "'cmd:['\${r_$rtype[$action]} '$*]'"
+  eval \${r_$rtype[$action]} '"$@"'
+  ## \
+  ##  $(if [ -n "$revs" ] ; then if [ $rtype = svn ] ; then echo -r ${revs/../:} ; elif [ $rtype = hg ] ; then if [[ $revs == echo -r ${revs/../:}  echo $revs -- ; fi) \
+  ##
 }
 
 
