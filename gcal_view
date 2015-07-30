@@ -1,0 +1,20 @@
+#! /bin/sh
+# gcal_view (Bourne shell script) -- convert a Google Calendar feed URL to a viewable URL
+#
+# E.g. https://www.google.com/calendar/ical/spacecubed.org_v21fsf1vm405it5srhk7he78es%40group.calendar.google.com/public/basic.ics 
+# to   https://www.google.com/calendar/embed?src=spacecubed.org_v21fsf1vm405it5srhk7he78es%40group.calendar.google.com&ctz=Australia/Perth
+
+timezone=${2-Australia/Perth}
+
+if [ $# -lt 1 ] ; then
+  echo "Usage: gcal_view <feed_url> [ <timezone> ]" >&2
+  exit 1
+fi
+
+user=$(echo "$1" | sed -n 's@https://www.google.com/calendar/ical/\([^/]*\).*@\1@p')
+if [ -z "$user" ]  ; then
+  echo "gcal_view: Error: invalid feed URL (doesn't start with https://www.google.com/calendar/ical/)" >&2
+  exit 2
+fi
+
+echo "https://www.google.com/calendar/embed?src=$user&ctz=$timezone"
