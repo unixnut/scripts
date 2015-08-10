@@ -49,7 +49,7 @@ svn_toplevel()
   local toplevel dir=$(readlink -f "${1-.}")
 
   # start at arg (or $PWD) and work up the tree
-  while [ $dir != / ] ; do
+  while [ "$dir" != / ] ; do
     # if the dir is a working copy, it's a candidate for the toplevel
     if [ -d "$dir/.svn" ] ; then
       # if there hasn't been a candidate before, flag this dir straightaway
@@ -286,6 +286,17 @@ hg_commit()
 }
 
 
+# $1=revs $2=rtype
+mk_revopt()
+{
+  case $2 in
+    svn) echo -r ${1/../:} ;;
+    hg)  if [[ $1 == *..* ]] ; then echo -r ${1/../ -r } ; else echo -r $1 ; fi ;;
+    git) echo $1 -- ;;
+  esac
+}
+
+
 not_implemented()
 {
   echo "smooth: ERROR: action '$action' not implemented for $rtype" >&2
@@ -320,10 +331,9 @@ dispatch()
 
   ## set -x
   [ $debug -ge 2 ] && eval echo "'cmd:['\${r_$rtype[$action]} '$*]'"
-  eval \${r_$rtype[$action]} '"$@"'
-  ## \
-  ##  $(if [ -n "$revs" ] ; then if [ $rtype = svn ] ; then echo -r ${revs/../:} ; elif [ $rtype = hg ] ; then if [[ $revs == echo -r ${revs/../:}  echo $revs -- ; fi) \
-  ##
+  eval \${r_$rtype[$action]} \
+    $(if [ -n "$revs" ] ; then mk_revopt "$revs" $rtype ; fi) \
+    '$extra_opts "$@"'
 }
 
 
@@ -531,6 +541,7 @@ set +e      # getopt would have already reported the error
 while [ x"$1" != x-- ] ; do
   case "$1" in
     -d) debug=$((debug + 1)) ;;
+    -f|--force) extra_opts="$extra_opts --force" ;;
     -s) git_use_staged=y ;;
     -q|--quiet) quiet=y ;;
     -C) colour=y ;;
