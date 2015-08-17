@@ -4,6 +4,7 @@
 # Version: 0.6
 # Copyright: (c) 2015 Alastair Irvine <alastair@plug.org.au>
 # Keywords: hostname
+# See: 
 # Licence: This file is released under the GNU General Public License
 #
 # See show_help() for usage.
@@ -220,6 +221,7 @@ fi
 # check for systemd present
 if [ -x /bin/hostnamectl ] ; then
   hostnamectl set-hostname $longname
+  update_hosts_file
 else
   # Check for RedHat or Amazon Linux
   if [ -f /etc/redhat-release -o -f /etc/system-release ] ; then

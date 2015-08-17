@@ -181,7 +181,10 @@ then
 else
   echo "Creating user $username."
   $USERADD "$@"
-  if [ ! $locked = y ] ; then
+  if [ $locked = y ] ; then
+    # This isn't done by default on RedHat
+    passwd -l $username
+  else
     # delete the user's password and mark it as expired
     passwd -d $username
     ## passwd -e $username
