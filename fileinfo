@@ -13,14 +13,14 @@ if ($#ARGV + 1 >= 1)
           }
         else
           {
-    	    ($info{'dev'}, $info{'ino'}, $info{'mode'}, $info{'nlink'}, $info{'uid'}, $info{'gid'}, $info{'rdev'}, $info{'size'}, $info{'atime'}, $info{'mtime'}, $info{'ctime'}, $info{'blksize'}, $info{'blocks'}) = @all_info;
-    	    $info{'name'} = $ARGV[$argindex];
+            ($info{'dev'}, $info{'ino'}, $info{'mode'}, $info{'nlink'}, $info{'uid'}, $info{'gid'}, $info{'rdev'}, $info{'size'}, $info{'atime'}, $info{'mtime'}, $info{'ctime'}, $info{'blksize'}, $info{'blocks'}) = @all_info;
+            $info{'name'} = $ARGV[$argindex];
     
             printf( "%s \t%o  %d bytes  (%s)\n",
                     $info{'name'}, $info{'mode'}, $info{'size'},
                     "$info{'dev'}:$info{'ino'}" );
             # I think the $bf forces the output into string context
-    	    print( ($bf = localtime( $info{'atime'} )) . "  " .
+            print( ($bf = localtime( $info{'atime'} )) . "  " .
                    ($bf = localtime( $info{'mtime'})) . "  " .
                    ($bf = localtime( $info{'ctime'} )) . "\n" );
           }
