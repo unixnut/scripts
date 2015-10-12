@@ -16,7 +16,7 @@
 #   + option to force detection (don't save)
 
 self=current-song
-AWK_FN_getvalue="function getvalue(key) { return substr($0, length(key) + 3); }"
+AWK_FN_getvalue='function getvalue(key) { return substr($0, length(key) + 3); }'
 
 
 # Options:

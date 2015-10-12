@@ -1,0 +1,8 @@
+#! /bin/sed -f
+# cconv (sed script) -- converts Unicode punctuation into ASCII equivalents
+#
+# Keywords: UTF-8 Unicode characters
+
+s/–/--/g
+s/[“”]/"/g
+s/[‘’]/'/g

@@ -1,5 +1,7 @@
 #! /usr/bin/perl --
 # fileinfo (PERL script) -- prints time & inode info about a file
+#
+# Written 31 Dec 2002
 
 if ($#ARGV + 1 >= 1)
   {
@@ -14,8 +16,13 @@ if ($#ARGV + 1 >= 1)
     	    ($info{'dev'}, $info{'ino'}, $info{'mode'}, $info{'nlink'}, $info{'uid'}, $info{'gid'}, $info{'rdev'}, $info{'size'}, $info{'atime'}, $info{'mtime'}, $info{'ctime'}, $info{'blksize'}, $info{'blocks'}) = @all_info;
     	    $info{'name'} = $ARGV[$argindex];
     
-            printf( "%s  %o  %d bytes  ($info{'dev'}:$info{'ino'})\n", $info{'name'}, $info{'mode'}  , $info{'size'} );
-    	    print( ($bf = localtime( $info{'atime'} )) . "  " . ($bf = localtime( $info{'mtime'})) . "  " . ($bf = localtime( $info{'ctime'} )) . "\n" );
+            printf( "%s \t%o  %d bytes  (%s)\n",
+                    $info{'name'}, $info{'mode'}, $info{'size'},
+                    "$info{'dev'}:$info{'ino'}" );
+            # I think the $bf forces the output into string context
+    	    print( ($bf = localtime( $info{'atime'} )) . "  " .
+                   ($bf = localtime( $info{'mtime'})) . "  " .
+                   ($bf = localtime( $info{'ctime'} )) . "\n" );
           }
       }
   }
