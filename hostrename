@@ -30,6 +30,8 @@
 #
 # TO-DO:
 #  + look for "name ...." in /var/lib/bluetooth/11:11:11:11:11:11/config
+#  + update_hosts_file():
+#      use the actual IP address instead of 127.0.1.1 when adding a hostname entry
 
 ## /bin/hostnamectl set-hostname --static <x>
 
@@ -113,7 +115,8 @@ update_hosts_file()
   then
     sed --in-place=.old "s/^127\.0\.1\.1\>.*/127.0.1.1\t$hosts_sed_subst/" \
       $hosts_file
-  elif grep --quiet "^[^#]*\<${oldhostname//./\\.}\>" $hosts_file
+  elif [ $oldhostname != localhost ] && [ $oldhostname != localhost.localdomain ] && \
+       grep --quiet "^[^#]*\<${oldhostname//./\\.}\>" $hosts_file
   then
     # There's a static entry, so replace that.
     # replace the hostname (with dots quoted) leaving the IP address intact
