@@ -1,0 +1,23 @@
+#! /bin/sh
+# moz_menus (Bourne shell script) -- Shows Iceape menus from vega
+
+# Show all menus except for the ones in the Menu structure below
+#(Bookmarks Toolbar is OK though)
+echo 'SELECT id, parent, title FROM moz_bookmarks
+        WHERE type=2 AND (parent>=2 OR id=3)
+        ORDER BY parent, position;' |
+  sqlite3 Transfer.incoming/tarantula/places.sqlite
+
+# -- Type codes --
+# 1: bookmark
+# 2: submenu/root
+# 3: separator
+
+# -- Menu structure --
+# id|parent|type|title
+# 1|0|2|
+# 2|1|2|Bookmarks Menu
+# 3|1|2|Bookmarks Toolbar
+# 4|1|2|Tags
+# 5|1|2|Unsorted Bookmarks
+
