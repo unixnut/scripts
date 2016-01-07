@@ -1,0 +1,13 @@
+#! /bin/sh
+# reactivate (Bourne shell script) -- Changes a user's password change date to today
+
+TODAY=$(date +%F)
+
+if [ $# -eq 0 ] ; then
+  echo "reactivate: Error: no users supplied" >&2
+  exit 1
+fi
+
+for user ; do
+  sudo chage --lastday $TODAY $user
+done
