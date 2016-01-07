@@ -7,7 +7,7 @@
 #   -d      Debug mode; for smooth developers only.
 #   -q      quiet mode; don't report the top level working directory
 #
-# Version: 1.1.0
+# Version: 1.2.0
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: git svn hg source-control wrapper
 # Requires: bash v4.0+
@@ -31,8 +31,8 @@
 #   + pipe output for svn (when $action is like [dl]*, dispatch should pipe through less or `vim -`)
 
 self=$(basename "$0")
-allowed_options=dsqC
-allowed_long_options=quiet
+allowed_options=dsqCfr
+allowed_long_options=quiet,force
 
 
 # *** FUNCTIONS ***
@@ -86,13 +86,15 @@ svn_toplevel()
 }
 
 
+# This will return 0 if on a branch or 1 if detached head (outputs nothing)
 git_current_branch()
 {
-  git branch | sed -n 's/^\* \(.*\)/\1/p'
+  git branch | sed -n 's/^\* \(.*\)/\1/p' | grep -v '(no branch)'
 }
 
 
 # Outputs $branch (if set during command-line parsing) or the current branch
+# or nothing if detached head (and returns 1)
 git_which_branch()
 {
   ## # force output of branch name
@@ -271,6 +273,17 @@ git_smart_jump()
 git_smart_merge()
 {
   not_implemented   # FIXME
+}
+
+
+# Checks for a detached head, and if so, switches back to the master branch
+git_update()
+{
+  if ! git_current_branch > /dev/null
+  then
+    git checkout master
+  fi
+  git pull
 }
 
 
@@ -485,6 +498,8 @@ r_git[p]=git_print_tags
 r_git[print-tags]=git_print_tags
 r_git[od]=git_object_dump
 r_git[object-dump]=git_object_dump
+r_git[u]=git_update
+r_git[update]=git_update
 
 
 # == Command-line parsing ==
@@ -543,6 +558,7 @@ while [ x"$1" != x-- ] ; do
     -d) debug=$((debug + 1)) ;;
     -f|--force) extra_opts="$extra_opts --force" ;;
     -s) git_use_staged=y ;;
+    -r|--recursive) extra_opts="$extra_opts -r" ;;
     -q|--quiet) quiet=y ;;
     -C) colour=y ;;
   esac
@@ -632,10 +648,10 @@ case $action in
     $dispatch $rtype "$@"
     ;;
 
-  i*) # 'init' (repo creation)
+  i*) # 'init' (repo clone)
     url=$1
     case $url in
-      git://|*\.git|https://git*|http://git*) rtype=git ;;
+      git://|*.git|https://git*|http://git*|git@*) rtype=git ;;
       svn+ssh:*|http://*/svn/*) rtype=svn ;;
       *) rtype=hg ;;
     esac
@@ -685,7 +701,7 @@ case $action in
     for arg ; do
       maybe_store_option "$arg"   # Might start the next cycle
 
-      if [ ! -e "$arg" ] ; then
+      if [[ $action != [m]* && ! -e "$arg" ]] ; then
         echo "smooth: ERROR: '$arg' does not exist" >&2
         exit 2
       fi
