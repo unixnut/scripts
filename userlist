@@ -1,7 +1,7 @@
 #! /bin/sh
 # userlist (Bourne shell script) -- list one or all users, with password and expiry info
 #
-# Version: 1.3
+# Version: 1.3.1
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: users passwd group gecos expiry
 # Licence: This file is released under the GNU General Public License
@@ -30,6 +30,7 @@
 #   + Output phone numbers, etc.
 #   + research: does today have to be past the expiry date to count as expired
 #   + option to sort output by various criteria
+#   + expand @<groupname> or %<groupname> into a list of users
 
 
 self=`basename $0`
