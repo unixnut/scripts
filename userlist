@@ -28,7 +28,7 @@
 #   + Rainbow mode, which outputs all 14 pieces of information printed
 #     for each user in a different colour.
 #   + Output phone numbers, etc.
-#   + check if today has to be past the expiry date to count as expired
+#   + research: does today have to be past the expiry date to count as expired
 #   + option to sort output by various criteria
 
 
@@ -172,15 +172,17 @@ process_users_full()
                 # changed in the future, or has expired
                 if [ $pw_age -lt 0 ] ; then
                   pwstatus=future
-                elif [ $pwstatus = set -a $pw_age -gt $max_age ] ; then
-                  pwstatus=old
-                  # Check for the auto-expired state
-                  if [ -z "$grace_days" ] ; then
-                    grace_days=0
-                  fi
-                  if [ $pw_age -gt $(($max_age + $grace_days)) ] ; then
-                    status=expired
-                    status_shown="expired (auto)"
+                elif [ -n "$max_age" ] ; then
+                  if [ $pwstatus = set -a "$pw_age" -gt "$max_age" ] ; then
+                    pwstatus=old
+                    # Check for the auto-expired state
+                    if [ -z "$grace_days" ] ; then
+                      grace_days=0
+                    fi
+                    if [ $pw_age -gt $(($max_age + $grace_days)) ] ; then
+                      status=expired
+                      status_shown="expired (auto)"
+                    fi
                   fi
                 fi
                 ;;
