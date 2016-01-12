@@ -31,6 +31,7 @@
 #   + research: does today have to be past the expiry date to count as expired
 #   + option to sort output by various criteria
 #   + expand @<groupname> or %<groupname> into a list of users
+#   + test for min_age > max_age; this means user cannot change her password
 
 
 self=`basename $0`
@@ -174,9 +175,9 @@ process_users_full()
                 if [ $pw_age -lt 0 ] ; then
                   pwstatus=future
                 elif [ -n "$max_age" ] ; then
-                  # Note that the pw_age will still be set if the password is
+                  # Note that pw_age will still be set if the password is
                   # locked or empty
-                  if [ "$pw_age" -gt "$max_age" ] ; then
+                  if [ "$max_age" -gt 0 -a "$pw_age" -gt "$max_age" ] ; then
                     if [ $pwstatus = set ] ; then
                       pwstatus=old
                     fi
