@@ -176,7 +176,7 @@ process_users_full()
                 elif [ -n "$max_age" ] ; then
                   # Note that the pw_age will still be set if the password is
                   # locked or empty
-                  if [ -a "$pw_age" -gt "$max_age" ] ; then
+                  if [ "$pw_age" -gt "$max_age" ] ; then
                     if [ $pwstatus = set ] ; then
                       pwstatus=old
                     fi
