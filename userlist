@@ -1,7 +1,7 @@
 #! /bin/sh
 # userlist (Bourne shell script) -- list one or all users, with password and expiry info
 #
-# Version: 1.3.1
+# Version: 1.3.2
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: users passwd group gecos expiry
 # Licence: This file is released under the GNU General Public License
@@ -32,6 +32,7 @@
 #   + option to sort output by various criteria
 #   + expand @<groupname> or %<groupname> into a list of users
 #   + test for min_age > max_age; this means user cannot change her password
+#   + handle max_age == 0 (this isn't valid)
 
 
 self=`basename $0`
@@ -177,7 +178,7 @@ process_users_full()
                 elif [ -n "$max_age" ] ; then
                   # Note that pw_age will still be set if the password is
                   # locked or empty
-                  if [ "$max_age" -gt 0 -a "$pw_age" -gt "$max_age" ] ; then
+                  if [ "$max_age" -ge 0 -a "$pw_age" -gt "$max_age" ] ; then
                     if [ $pwstatus = set ] ; then
                       pwstatus=old
                     fi
