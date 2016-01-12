@@ -174,8 +174,12 @@ process_users_full()
                 if [ $pw_age -lt 0 ] ; then
                   pwstatus=future
                 elif [ -n "$max_age" ] ; then
-                  if [ $pwstatus = set -a "$pw_age" -gt "$max_age" ] ; then
-                    pwstatus=old
+                  # Note that the pw_age will still be set if the password is
+                  # locked or empty
+                  if [ -a "$pw_age" -gt "$max_age" ] ; then
+                    if [ $pwstatus = set ] ; then
+                      pwstatus=old
+                    fi
                     # Check for the auto-expired state
                     if [ -z "$grace_days" ] ; then
                       grace_days=0
