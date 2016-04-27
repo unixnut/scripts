@@ -7,7 +7,7 @@
 #   -d      Debug mode; for smooth developers only.
 #   -q      quiet mode; don't report the top level working directory
 #
-# Version: 1.2.0
+# Version: 1.2.1
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: git svn hg source-control wrapper
 # Requires: bash v4.0+
@@ -500,6 +500,8 @@ r_git[od]=git_object_dump
 r_git[object-dump]=git_object_dump
 r_git[u]=git_update
 r_git[update]=git_update
+r_git[i]="git clone --recursive"
+r_git[init]="git clone --recursive"
 
 
 # == Command-line parsing ==
