@@ -7,7 +7,7 @@
 #   -d      Debug mode; for smooth developers only.
 #   -q      quiet mode; don't report the top level working directory
 #
-# Version: 1.2.1
+# Version: 1.2.2
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: git svn hg source-control wrapper
 # Requires: bash v4.0+
@@ -214,8 +214,8 @@ git_commit()
   local transfer
 
   if [ "x$1" = "x-l" ] ; then
-    transfer=n
     shift
+    transfer=n
   else
     transfer=y
   fi
@@ -228,6 +228,13 @@ git_commit()
     git pull
     echo '...done.'
     sleep 1
+  fi
+
+  if [ "x$1" = "x-a" ] ; then
+    # all (specified) files, even if new
+    shift
+    git_use_staged=y
+    git add -A "$@"
   fi
 
   set -e
@@ -471,6 +478,10 @@ r_git[commit-quick-local]="git_commit -l -q"
 r_git[cql]="git_commit -l -q"
 r_git[commit-local]="git_commit -l"
 r_git[cl]="git_commit -l"
+r_git[commit-all]="git_commit -a"
+r_git[ca]="git_commit -a"
+r_git[commit-all-quick]="git_commit -q -a"
+r_git[caq]="git_commit -q -a"
 r_svn[commit]=svn_commit
 r_svn[c]=svn_commit
 r_hg[commit]=hg_commit
