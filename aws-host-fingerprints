@@ -3,6 +3,11 @@
 #
 # Keywords: ssh AWS EC2 security
 
+while [ "$(echo "x$1" | cut -c2)" = - ] ; do
+  args="$args $1"
+  shift
+done
+
 self=aws-host-fingerprints
 
 if [ -z "$1" ] ; then
@@ -10,9 +15,28 @@ if [ -z "$1" ] ; then
   exit 1
 fi
 
-aws ec2 --output=text get-console-output --instance-id=$1 |
-  sed -n '/^ec2: -----BEGIN SSH HOST KEY FINGERPRINTS-----/,/^ec2: -----END SSH HOST KEY FINGERPRINTS-----/p' |
-  tee /tmp/aws-host-fingerprints_$$
+cont=y
+while [ $cont = y ]
+do
+  # Redirect STDERR because 
+  aws ec2 --output=text get-console-output $args --instance-id=$1 |
+    sed -n '/^ec2: -----BEGIN SSH HOST KEY FINGERPRINTS-----/,/^ec2: -----END SSH HOST KEY FINGERPRINTS-----/p' |
+    tee /tmp/aws-host-fingerprints_$$ 2> /tmp/aws-host-fingerprints_errors_$$
+
+  # Check if valid output was produced
+  if [ -s /tmp/aws-host-fingerprints_errors_$$ ] && \
+       grep -q -v -e "'Output'" -e '^$' /tmp/aws-host-fingerprints_errors_$$
+  then
+    # if not, loop again
+    echo waiting...
+    sleep 3
+    cont=y
+  else
+    # print the errors as they would have been if not captured
+    cat /tmp/aws-host-fingerprints_errors_$$ >&2
+    cont=n
+  fi
+done
 
 # If there is nothing in the file, throw an error
 if [ ! -s /tmp/aws-host-fingerprints_$$ ] ; then

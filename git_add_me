@@ -1,0 +1,35 @@
+#! /bin/sh
+# git_add_me (Bourne shell script) -- Adds a remote for my fork of the current project
+
+
+# This will return 0 if on a branch or 1 if detached head (outputs nothing)
+git_current_branch()
+{
+  git branch | sed -n 's/^\* \(.*\)/\1/p' | grep -v '(no branch)'
+}
+
+
+# Outputs the name of the remote for the appropriate branch (current or
+# specified, i.e. present in $branch) or nothing (and an non-zero exit code) if
+# the branch doesn't exist or doesn't have a remote.
+git_remote()
+{
+  git config --get "branch.$(git_current_branch).remote"
+}
+
+
+# *** MAINLINE ***
+set -e
+
+r=$(git_remote)
+url=$(git config --get "remote.$r.url" |
+        sed -e 's@.*/@@' -e 's/\.git$//' -e 's/.*/git@github.com:unixnut\/&.git/')
+
+echo "Adding remote \"me\" pointing to $url"
+git remote add me $url
+
+: << EOT
+[remote "me"]
+	fetch = +refs/heads/*:refs/remotes/origin/*
+	url = git@github.com:unixnut/$reponame.git
+EOT
