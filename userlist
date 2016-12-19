@@ -191,6 +191,9 @@ process_users_full()
                       status_shown="expired (auto)"
                     fi
                   fi
+                else
+                  # This is the implied meaning of a blank field
+                  max_age=-1
                 fi
                 ;;
           esac

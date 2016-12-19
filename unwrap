@@ -1,7 +1,7 @@
 #! /usr/bin/python
 # unwrap (Python script) -- removes soft line breaks
 #
-# Version:   0.5
+# Version:   1.0
 # Copyright: (c)2015 Alastair Irvine <alastair@plug.org.au>
 # Keywords:  qp text
 # Licence:   This file is released under the GNU General Public License
@@ -26,7 +26,6 @@ Options:
 #
 #
 # TO-DO:
-#   + support stdin
 
 import sys
 import getopt
@@ -85,8 +84,10 @@ def process_regular(f):
     o = Output()
     text = ""
 
+    # Process lines, detecting paragraphs from empty lines and re-inserting line breaks
     for line in f.readlines():
-        s = line.rstrip()
+        # Used to use rstrip() here, but why??
+        s = line.strip()
         if s == "":
             text += o.flush() + "\n"
         else:
@@ -135,10 +136,13 @@ if __name__ == '__main__':
     ##     show_help(sys.stderr)
     ##     sys.exit(1)
 
-    # -- argument handling --
-    if len(args) == 0:
-        report_error("stdin not supported")
-        sys.exit(2)
+
+    # == processing ==
+    if len(args) == 0 or args[1] == "-":
+        if params["quopri"]:
+            print process_quopri(sys.stdin)
+        else:
+            print process_regular(sys.stdin)
     else:
         for filename in args:
             f = open(filename)
@@ -146,13 +150,3 @@ if __name__ == '__main__':
                 print process_quopri(f)
             else:
                 print process_regular(f)
-
-
-
-    # == sanity checking ==
-
-
-    # == preparation ==
-
-
-    # == processing ==
