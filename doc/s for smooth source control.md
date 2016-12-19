@@ -66,10 +66,10 @@ name.
 | `s **lff**` (log-veryfull) | N/A | `git log --patch --full-diff` | ? | | |
 | `s **p**rint-tags`  | N/A | `git show-ref --tags`      | `hg tags` | | |
 | `s **od**` (object-dump)  | N/A | `git show`      | `hg ` | | |
-| `s **f**orget`   | `svn rm --keep-local`  | `git reset HEAD` | `hg forget` | | |
+| `s **f**orget`   | `svn rm --keep-local`  | `git rm -r --cached` | `hg forget` | | |
 | `s **fp**` (forget-patch)   | N/A  | `git reset --patch HEAD` | N/A | | |
 | `s **j**ump`  | `svn -r`     | `git_smart_jump` | `hg update -r` | | |
-| `s **z**` (undo)   | `echo carefully use 'svn revert'`  | `git reset --soft` | `hg rollback` | | |
+| `s **z**` (undo)   | `echo carefully use 'svn revert'`  | `git reset HEAD^` | `hg rollback` | | |
 
 template: | `s ****`  | `svn `  | `git `      | `hg ` | | |
 <br>Unused command shortcuts: `kxy`

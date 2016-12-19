@@ -7,7 +7,7 @@
 #   -d      Debug mode; for smooth developers only.
 #   -q      quiet mode; don't report the top level working directory
 #
-# Version: 1.2.2
+# Version: 1.3
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: git svn hg source-control wrapper
 # Requires: bash v4.0+
@@ -29,10 +29,13 @@
 #
 # TO-DO:
 #   + pipe output for svn (when $action is like [dl]*, dispatch should pipe through less or `vim -`)
+#   + 'init' action: detect if http[s] URL hosts a Mercurial repo
+#   + hg commit functions
+#   + need a means to override 'remote.<name>.push' branch
 
 self=$(basename "$0")
-allowed_options=dsqCfr
-allowed_long_options=quiet,force
+allowed_options=dsqCfrM
+allowed_long_options=quiet,force,mercurial
 
 
 # *** FUNCTIONS ***
@@ -113,7 +116,7 @@ git_which_branch()
 # the branch doesn't exist or doesn't have a remote.
 git_remote()
 {
-  git config --get "branch.$(git_which_branch).remote"
+  git config --get "branch.${1:-$(git_which_branch)}.remote"
 }
 
 
@@ -133,17 +136,39 @@ git_url()
 }
 
 
+# Pushes the current/specified branch only.  Is smart about which branch to push to.
 git_transfer()
 {
-  local r
+  local remote branch rb
 
-  if ! r=$(git_remote)
+  # Determine local branch to push
+  if ! branch=$(git_which_branch)
   then
-    echo "smooth: ERROR: branch '$branch' does not exist or doesn't have a remote" >&2
+    echo "smooth: ERROR: branch '$branch' does not exist" >&2
+    exit 11
+  fi
+
+  if ! remote=$(git_remote "$branch")
+  then
+    echo "smooth: ERROR: branch '$branch' does not have a remote" >&2
     exit 8
   fi
 
-  git push "$r" $(git_which_branch)
+  # Determine the remote branch to push to:
+  # 1) Use specified remote branch (if set) -- FIXME
+  # 2) Otherwise, get 'remote.<name>.push' (if set)
+  # 3) Otherwise, get 'branch.<name>.merge' (if set)
+  #    (This emulates "push.default = tracking")
+  # 4) Otherwise, default to local branch name
+  #    (note: this can create a new (non-tracking) remote branch)
+  if ! rb=$(git config --get "remote.$remote.push")
+  then
+    if ! rb=$(git config --get "branch.$branch.merge")
+    then
+      rb=$branch
+    fi
+  fi
+  git push "$remote" "$branch:$rb"
 }
 
 
@@ -225,7 +250,9 @@ git_commit()
     shift
   else
     echo 'Running "git pull"...'
+    set -e
     git pull
+    set +e
     echo '...done.'
     sleep 1
   fi
@@ -302,7 +329,49 @@ svn_commit()
 
 hg_commit()
 {
-  not_implemented   # FIXME
+  local transfer
+
+  if [ "x$1" = "x-l" ] ; then
+    shift
+    transfer=n
+  else
+    transfer=y
+  fi
+
+  if [ "x$1" = "x-q" ] ; then
+    # quick
+    shift
+  else
+    echo 'Running "hg pull"...'
+    hg pull -u
+    echo '...done.'
+    sleep 1
+  fi
+
+  set -e
+  if [ "x$1" = "x-a" ] ; then
+    # all (specified) files, even if new
+    shift
+    hg_do_commit --addremove "$@"
+  else
+    hg_do_commit "$@"
+  fi
+
+  if [ $transfer = y ] ; then
+    hg_transfer
+  fi
+
+  set +e
+}
+
+
+hg_do_commit() {
+  hg commit
+}
+
+
+hg_transfer() {
+  hg push
 }
 
 
@@ -482,8 +551,8 @@ r_git[commit-all]="git_commit -a"
 r_git[ca]="git_commit -a"
 r_git[commit-all-quick]="git_commit -q -a"
 r_git[caq]="git_commit -q -a"
-r_svn[commit]=svn_commit
-r_svn[c]=svn_commit
+r_git[commit-all-quick-local]="git_commit -l -q -a"
+r_git[caql]="git_commit -l -q -a"
 r_hg[commit]=hg_commit
 r_hg[c]=hg_commit
 r_hg[commit-quick]="hg_commit -q"
@@ -492,6 +561,14 @@ r_hg[commit-quick-local]="hg_commit -l -q"
 r_hg[cql]="hg_commit -l -q"
 r_hg[commit-local]="hg_commit -l"
 r_hg[cl]="hg_commit -l"
+r_hg[commit-all]="hg_commit -a"
+r_hg[ca]="hg_commit -a"
+r_hg[commit-all-quick]="hg_commit -q -a"
+r_hg[caq]="hg_commit -q -a"
+r_hg[commit-all-quick-local]="hg_commit -l -q -a"
+r_hg[caql]="hg_commit -l -q -a"
+r_svn[commit]=svn_commit
+r_svn[c]=svn_commit
 r_svn[status]="svn status"
 r_svn[s]="svn status"
 r_svn[st]="svn status"
@@ -572,6 +649,10 @@ while [ x"$1" != x-- ] ; do
     -f|--force) extra_opts="$extra_opts --force" ;;
     -s) git_use_staged=y ;;
     -r|--recursive) extra_opts="$extra_opts -r" ;;
+    -M|--mercurial)
+      # Mercurial repo
+      rtype=hg
+      ;;
     -q|--quiet) quiet=y ;;
     -C) colour=y ;;
   esac
@@ -663,11 +744,14 @@ case $action in
 
   i*) # 'init' (repo clone)
     url=$1
-    case $url in
-      git://|*.git|https://git*|http://git*|git@*) rtype=git ;;
-      svn+ssh:*|http://*/svn/*) rtype=svn ;;
-      *) rtype=hg ;;
-    esac
+    if [ -z "$rtype" ] ; then
+      case $url in
+        git://*|*.git|https://git*|http://git*|https://*.github.io|git@*) rtype=git ;;
+        http://bitbucket.org/*|https://bitbucket.org/*) rtype=git ;;
+        svn+ssh:*|http://*/svn/*) rtype=svn ;;
+        *) rtype=hg ;;
+      esac
+    fi
 
     # check if the last argument is an existing directory
     if [ -d "${@: -1}" ] ; then
