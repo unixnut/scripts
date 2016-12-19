@@ -50,6 +50,7 @@ _log()
 
 
 # == Public ==
+# -- functions that log to syslog only --
 syslog_emergency()
 {
   _log $LOG_EMERGENCY -- "$*"
@@ -98,8 +99,7 @@ syslog_debug()
 }
 
 
-
-# These functions log to stderr as well
+# -- functions that log to stderr and syslog --
 log_emergency()
 {
   _log $LOG_EMERGENCY -s -- "$*"
