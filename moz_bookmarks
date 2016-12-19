@@ -2,14 +2,15 @@
 # moz_menus (Bourne shell script) -- Shows Iceape menus from vega
 
 # Default to the Bookmarks Menu
-parent=${1-2}
+parent=${1:-2}
+file=${2:-Transfer.incoming/tarantula/places.sqlite}
 # Show all menu items that are bookmarks from a given menu
 echo "SELECT moz_bookmarks.title, url
-        FROM moz_places
+      FROM moz_places
         INNER JOIN moz_bookmarks ON moz_places.id=moz_bookmarks.fk
-        WHERE type=1 AND parent=$parent$cond_extra
-        ORDER BY position;" |
-  sqlite3 Transfer.incoming/tarantula/places.sqlite
+      WHERE type=1 AND parent=$parent$cond_extra
+      ORDER BY position;" |
+  sqlite3 $file
 
 # -- Type codes --
 # 1: bookmark

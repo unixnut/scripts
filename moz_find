@@ -1,0 +1,15 @@
+#! /bin/sh
+# moz_find (Bourne shell script) -- Free-text search on bookmark names
+
+file=${2:-Transfer.incoming/tarantula/places.sqlite}
+echo "SELECT parent, moz_bookmarks.title, url
+        FROM moz_places
+        INNER JOIN moz_bookmarks ON moz_places.id=moz_bookmarks.fk
+        WHERE type=1 AND moz_bookmarks.title LIKE '%$1%';" |
+  sqlite3 $file
+  ## Transfer.incoming/decrux/places.sqlite
+
+# -- Type codes --
+# 1: bookmark
+# 2: submenu/root
+# 3: separator
