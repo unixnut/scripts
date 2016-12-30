@@ -1,7 +1,7 @@
 #! /bin/bash
 # clowncar (BASH script) -- wrapper for useradd that manages SSH public key
 #
-# Version: 1.1
+# Version: 1.2
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: ssh security user
 # Notice: Can cause security weaknesses in some cases.  See Warnings below.
@@ -66,7 +66,13 @@
 #     Or see the file COPYING in the same directory as this program.
 #
 #
-# TO-DO: Provide option to fail if user already exists
+# TO-DO:
+#   + Provide option to fail if user already exists
+#   + Handle cases where group is missing when -g is specified, and vice versa
+#       - if -g present, specifies group
+#       - if -N present, read GROUP (default=100) from /etc/default/useradd
+#       - if -U present, group is username
+#       - if none present, read USERGROUPS_ENAB from /etc/login.defs: yes=-U; no=-N
 
 self=$0
 ## ... clowncar
@@ -103,8 +109,10 @@ clowncar_factory()
       -e "2 s/clowncar/clowncar_$username/" \
       -e "/^set_ssh_key()/,/^}/ d" \
       -e "/^clowncar_factory()/,/^}/ d" \
+      -e '/^# -- option handling --/ i\
+set -e' \
       -e "/^# -- option handling --/,/^# == sanity checking ==/ d" \
-      -e "/^# -- defaults --/,/^# -- end defaults --/ c\
+      -e "/^# -- defaults --/,/^# -- end defaults --/ c\\
 locked=$locked\n\
 username=$username\n\
 set -- $args" \
@@ -138,16 +146,20 @@ debug=0
 
 # -- option handling --
 # this is handled strangely because the rest of the arguments are passed to
-# useradd
+# useradd (which uses the following capital letter options: D, G, K, M, N, U, Z)
 while [ x"$1" = x-L -o x"$1" = x-O -o x"$1" = x-V ] ; do
-  if [ x"$1" = x-O ] ; then
-    output_filename="$2"
-    shift   # get rid of the option; argument gets done below
-  elif [ x"$1" = x-L ] ; then
-    locked=y
-  elif [ x"$1" = x-V ] ; then
-    debug=1
-  fi
+  case "$1" in
+    -O)
+      output_filename="$2"
+      shift   # get rid of the option; argument gets done below
+      ;;
+    -L)
+      locked=y
+      ;;
+    -V)
+      debug=1
+      ;;
+  esac
 
   shift
 done
@@ -193,6 +205,7 @@ else
 fi
 
 homedir=$(getent passwd $username | cut -f6 -d:)
+group=$(id --group --name $username)
 
 if [ ! -d $homedir ] ; then
   echo "${self}: Error: User $username's home directory doesn't exist" >&2
@@ -212,9 +225,9 @@ else
   # Create an empty authorized_keys file (and the directory if needed) with the
   # correct ownership and permissions
   if [ ! -d $homedir/.ssh ] ; then
-    install -o $username -g $username -d $homedir/.ssh
+    install -o $username -g $group -d $homedir/.ssh
   fi
-  install -o $username -g $username -m 600 /dev/null $homedir/.ssh/authorized_keys
+  install -o $username -g $group -m 600 /dev/null $homedir/.ssh/authorized_keys
 fi
 
 if [ $install_it = y ] ; then
