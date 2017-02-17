@@ -7,7 +7,7 @@
 #   -d      Debug mode; for smooth developers only.
 #   -q      quiet mode; don't report the top level working directory
 #
-# Version: 1.3
+# Version: 1.3.1
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: git svn hg source-control wrapper
 # Requires: bash v4.0+
@@ -746,7 +746,7 @@ case $action in
     url=$1
     if [ -z "$rtype" ] ; then
       case $url in
-        git://*|*.git|https://git*|http://git*|https://*.github.io|git@*) rtype=git ;;
+        git://*|*.git|https://git*|http://git*|https://*.github.io|https://gist.github.com/*|git@*) rtype=git ;;
         http://bitbucket.org/*|https://bitbucket.org/*) rtype=git ;;
         svn+ssh:*|http://*/svn/*) rtype=svn ;;
         *) rtype=hg ;;
