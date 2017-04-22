@@ -1,0 +1,31 @@
+#!/usr/bin/awk -f
+# vcf2list (AWK script) -- Converts a vCard file into one line of CSV, plus e-mail
+
+BEGIN { FS=":" }
+
+
+$1 ~ /^N\>/   {
+                # parts =
+                name_qty = split($2, name_parts, /;/);
+                name = name_parts[1] ", " name_parts[2];
+                fullname = name_parts[2] " " name_parts[1]
+              }
+
+$1 ~ /^ADR/   {
+                # parts =
+                addr_qty = split($2, parts, /;/);
+                if (addr_qty == 4)
+                  addr = parts[2] "  " parts[3] "  " parts[4];
+                else
+                  addr = parts[2] "  " parts[3]
+              }
+
+$1 ~ /^TEL/   { phone = $2 }
+
+$1 ~ /^EMAIL/ { email = $2 }
+
+END           {
+                print "\"" name "\",\"" phone "\",\"" addr "\",\"\""
+                if (email)
+                  print "alias " tolower(name_parts[2]) " " fullname " <" email ">"
+              }
