@@ -24,7 +24,7 @@ fi
 # *** FUNCTIONS ***
 # == Internal ==
 # Wrapper function that takes a numeric arg.
-# (Only logs if arg >= $min_log_level or the latter isn't set)
+# (Only logs if arg <= $max_log_level or the latter isn't set)
 # Remaining args are passed to logger verbatim, including options (like -s).
 # Usage: _log $LOG_XYZ [ -s ] -- "message"
 _log()
@@ -32,7 +32,7 @@ _log()
   _level=$1
   shift
 
-  if [ -z "$min_log_level" -o "$_level" -ge "$min_log_level" ] ; then
+  if [ -z "$max_log_level" -o "$_level" -le "$max_log_level" ] ; then
     # convert level to a token for logger(1)
     ## eval _log_designator=\$LOG_DESIGNATOR_$_level
 

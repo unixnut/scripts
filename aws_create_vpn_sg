@@ -1,0 +1,38 @@
+#! /bin/sh
+# aws_create_vpn_sg (Bourne shell script) -- Create SG and add rules for OpenVPN and IPsec
+#
+# Usage: aws_create_vpn_sg <vpc_id>
+
+if [ $# -ne 1 ] ; then
+  echo 'Usage: aws_create_vpn_sg <vpc_id>' >&2
+  exit 1
+fi
+
+case $1 in
+  vpc-*) ;;
+  *)
+    echo 'Usage: aws_create_vpn_sg <vpc_id>' >&2
+    exit 1
+    ;;
+esac
+
+set -e
+
+sg_id=$(aws ec2 create-security-group --group-name VPN --description "OpenVPN and IPsec" --vpc-id "$1")
+
+# protocol 50 is esp
+# protocol 51 is ah
+# UDP (not TCP as per /etc/services) Port 500 is isakmp a.k.a. IKEv1 & IKEv2
+# UDP Port 4500 is also used by IKEv2 due to the MOBIKE protocol (RFC 4555)
+# UDP Port 1194 is OpenVPN
+aws ec2 authorize-security-group-ingress --group-id "$sg_id" --ip-permissions \
+  '[{"IpProtocol": "50", "IpRanges": [{"CidrIp": "0.0.0.0/0"}]},
+    {"IpProtocol": "51", "IpRanges": [{"CidrIp": "0.0.0.0/0"}]},
+    {"IpProtocol": "udp", "FromPort": 500, "ToPort": 500, "IpRanges": [{"CidrIp": "0.0.0.0/0"}]},
+    {"IpProtocol": "udp", "FromPort": 4500, "ToPort": 4500, "IpRanges": [{"CidrIp": "0.0.0.0/0"}]},
+    {"IpProtocol": "udp", "FromPort": 1194, "ToPort": 1194, "IpRanges": [{"CidrIp": "0.0.0.0/0"}]}]'
+# Remove the default outbound-allow-all rule present in the SG
+aws ec2 revoke-security-group-egress --group-id "$sg_id" --protocol -1 --cidr 0.0.0.0/0
+
+echo "Security Group $sg_id created and populated."
+echo "(Don't forget to add this to the required instances.)"
