@@ -3,7 +3,7 @@
 
 # Default to the Bookmarks Menu
 parent=${1:-2}
-file=${2:-Transfer.incoming/tarantula/places.sqlite}
+file=${2:-~/Transfer.incoming/tarantula/places.sqlite}
 # Show all menu items that are bookmarks from a given menu
 echo "SELECT moz_bookmarks.title, url
       FROM moz_places

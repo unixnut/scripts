@@ -14,7 +14,7 @@ else
          WHERE type=1 AND moz_bookmarks.title LIKE '%$1%';"
 fi
 
-file=${2:-Transfer.incoming/tarantula/places.sqlite}
+file=${2:-~/Transfer.incoming/tarantula/places.sqlite}
 echo "$sql" | sqlite3 $file
   ## Transfer.incoming/decrux/places.sqlite
 

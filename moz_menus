@@ -3,7 +3,7 @@
 
 # Show all menus except for the ones in the Menu structure below
 #(Bookmarks Toolbar is OK though)
-file=${1:-Transfer.incoming/tarantula/places.sqlite}
+file=${1:-~/Transfer.incoming/tarantula/places.sqlite}
 echo "SELECT id, parent, title
       FROM moz_bookmarks
       WHERE type=2 AND (parent>=2 OR id=3)
