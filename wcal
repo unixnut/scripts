@@ -1,0 +1,71 @@
+#! /bin/sh
+# wcal (Bourne shell script) -- Shows a calendar, with week numbers, for a given month
+#
+# Usage: wcal [ month year | delta ]
+# A delta is a single arg with "+" or "-" prefix to adjust relative to currently month
+#
+# TO-DO:
+#   + Replace today-highlight that's omitted because stdout is a pipe
+
+case $# in
+  0) datespec=$(date +%m)/1 ;;
+  1) # Handle a delta
+     current_month=$(date +%m)
+     case $1 in
+       +*) relative_month=$(expr $current_month + ${1#+})
+           month=$(expr $relative_month % 12)
+           # Have to make month 0-based when working out the year delta
+           year=$(expr $(date +%Y) + $(expr $(expr $relative_month - 1) / 12))
+           ;;
+       -*) relative_month=$(expr $current_month - ${1#-})
+           if [ $relative_month -ge 1 ] ; then
+             month=$relative_month
+             year=$(date +%Y)
+           else
+             # Account for negative values or 0
+             month=$(expr 12 + $(expr $relative_month % 12))
+             # Have to increase negative year delta by 1, i.e. subtract 1
+             year=$(expr $(date +%Y) + $(expr $(expr $relative_month / 12) - 1))
+           fi
+           ;;
+       *) echo "Usage: wcal [ month year | delta ]" >&2
+          exit 1
+          ;;
+     esac
+     datespec=$month/1
+     ;;
+  2) month=$1
+     year=$2
+     datespec=$month/1
+     ;;
+  *) echo "Usage: wcal [ month year | delta ]" >&2
+     exit 1
+     ;;
+esac
+
+# Calculate the week number of the first (partial) week of the month and adjust
+# it (to be corrected later) if it's actually the last week of the previous year.
+if [ -n "$year" ] ; then
+  year_prefix=$year/
+fi
+num=$(date -d "$year_prefix$datespec" +%V)
+if [ $num -gt 50 ] ; then
+  pnum=$num
+  num=0
+fi
+
+ncal -bM $month $year |
+  sed -e '# Insert nl header & body delimiters before the relevant lines' \
+      -e '1i\
+\\:\\:\\:' -e '3i\
+\\:\\:' \
+      -e '# Strip out blank lines inserted by ncal' \
+      -e '/^ \+$/ d' |
+  nl --number-width=3 --number-format=ln --number-separator='  ' \
+     --starting-line-number=$num |
+  sed -e '# Modify header to include "wk" column' \
+      -e '3 s/^../wk/' \
+      -e '# Strip out blank lines inserted by nl' \
+      -e '1d' -e '4d' \
+      -e '# Correct the first week number if necessary' \
+      -e "s/^0 /$pnum/"
