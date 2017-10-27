@@ -1,0 +1,98 @@
+#! /bin/sh
+# moz_menus (Bourne shell script) -- Makes a Mozilla importable .html file from a given bookmark folder
+#
+# Example file:
+#   <!DOCTYPE NETSCAPE-Bookmark-file-1>
+#   <!-- This is an automatically generated file.
+#        It will be read and overwritten.
+#        DO NOT EDIT! -->
+#   <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+#   <TITLE>Bookmarks</TITLE>
+#   <H1>Bookmarks Menu</H1>
+#
+#   <DL><p>
+#       <DT><H3 ADD_DATE="907270202" LAST_MODIFIED="903300172">Help</H3>
+#       <DL><p>
+#           <DT><A HREF="http://www.tldp.org/" ADD_DATE="962596418" LAST_MODIFIED="962596353" LAST_CHARSET="ISO-8859-1">Linux Documentation Project</A>
+#           <DT><A HREF="http://www.linuxhelp.org/" ADD_DATE="1390973269" LAST_MODIFIED="962596353">Linux Help Online</A>
+#           <DT><A HREF="http://www.linuxnewbie.org/" ADD_DATE="1390973269" LAST_MODIFIED="962596353">Linuxnewbie.org</A>
+#       </DL><p>
+#   </DL>
+
+if [ x$1 = x-i ] ; then
+  nested=y
+  # increase indent level for each submenu level
+  indent="$2    "
+  shift
+  shift
+else
+  indent="    "
+  nested=n
+fi
+
+if [ $# -lt 1 ] ; then
+  echo "moz_export: Menu ID required" >&2
+  exit 1
+fi
+parent=$1
+file=${2:-~/Transfer.incoming/tarantula/places.sqlite}
+
+if [ $nested = n ] ; then
+  cat << EOT_1
+<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<!-- This is an automatically generated file.
+     It will be read and overwritten.
+     DO NOT EDIT! -->
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<TITLE>Bookmarks</TITLE>
+<H1>Bookmarks Menu</H1>
+
+<DL><p>
+    <HR>
+EOT_1
+fi
+
+# Create a header line, description line (if relevant) and list header for the menu
+echo ".separator ¬
+      SELECT title, moz_bookmarks.dateAdded, moz_bookmarks.lastModified, content
+        FROM moz_bookmarks
+          LEFT OUTER JOIN moz_items_annos ON moz_bookmarks.id=moz_items_annos.item_id
+        WHERE moz_bookmarks.type=2 AND moz_bookmarks.id=$parent;" |
+  sqlite3 $file |
+  awk -F ¬ '{ printf("%s<DT><H3 ADD_DATE=\"%d\" LAST_MODIFIED=\"%d\">%s</H3>\n",
+                     INDENT, $2 / 1000000, $3 / 1000000, $1) }
+            $4 != "" { printf("%s<DD>%s\n",
+                              INDENT, $4) }' INDENT="$indent"
+echo "$indent<DL><p>"
+
+# Extract all menu items from a given menu
+# Also grab submenus, using recursion
+# TO-DO: print tags, etc.
+echo ".separator ¬
+      SELECT moz_bookmarks.type, moz_bookmarks.title, url, moz_bookmarks.dateAdded, moz_bookmarks.lastModified, moz_bookmarks.id, content
+        FROM moz_bookmarks
+          LEFT OUTER JOIN moz_places ON moz_bookmarks.fk=moz_places.id
+          LEFT OUTER JOIN moz_items_annos ON moz_bookmarks.id=moz_items_annos.item_id
+        WHERE parent=$parent
+        ORDER BY position;" |
+  sqlite3 $file |
+  awk -F ¬ '$1 == 1 { printf("%s    <DT><A HREF=\"%s\" ADD_DATE=\"%d\" LAST_MODIFIED=\"%d\">%s</A>\n",
+                             INDENT, $3, $4 / 1000000, $5 / 1000000, $2)
+                      if ($7 != "") printf("%s    <DD>%s\n", INDENT, $7) }
+            # pass indent string so it can be extended
+            $1 == 2 { cmd=sprintf("%s -i \"%s\" %d", SELF, INDENT, $6);
+                      system(cmd); }
+            $1 == 3 { printf("%s    <HR>\n", INDENT) }' INDENT="$indent" SELF=$0
+
+# Menu trailer
+echo "$indent</DL><p>"
+
+# File trailer
+if [ $nested = n ] ; then
+  echo "</DL>"
+fi
+
+# -- Type codes --
+# 1: bookmark
+# 2: submenu/root
+# 3: separator
