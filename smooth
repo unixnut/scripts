@@ -7,9 +7,11 @@
 #   -d      Debug mode; for smooth developers only.
 #   -q      quiet mode; don't report the top level working directory
 #   -M/--mercurial/-G/--git  Force repo type 
-#   -r      (Git only)recursive clone
+#   -r      (Git only) recursive clone
+#   -o      (Git only) Specify remote to create/use
+#   -b      (Git only) Specify remote branch to push to
 #
-# Version: 1.4.0
+# Version: 1.4.1
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: git svn hg source-control wrapper
 # Requires: bash v4.0+
@@ -36,8 +38,8 @@
 #   + need a means to override 'remote.<name>.push' branch
 
 self=$(basename "$0")
-allowed_options=dsqCfrMGo:
-allowed_long_options=quiet,force,mercurial,git,origin=
+allowed_options=dsqCfrMGo:b:
+allowed_long_options=quiet,force,mercurial,git,origin=,branch=,remote-branch=
 
 
 # *** FUNCTIONS ***
@@ -150,20 +152,26 @@ git_transfer()
     exit 11
   fi
 
-  if ! remote=$(git_remote "$branch")
-  then
-    echo "smooth: ERROR: branch '$branch' does not have a remote" >&2
-    exit 8
+  if [ -n "$origin_name" ] ; then
+    remote=$origin_name
+  else
+    if ! remote=$(git_remote "$branch")
+    then
+      echo "smooth: ERROR: branch '$branch' does not have a remote" >&2
+      exit 8
+    fi
   fi
 
   # Determine the remote branch to push to:
-  # 1) Use specified remote branch (if set) -- FIXME
+  # 1) Use specified remote branch (if set)
   # 2) Otherwise, get 'remote.<name>.push' (if set)
   # 3) Otherwise, get 'branch.<name>.merge' (if set)
   #    (This emulates "push.default = tracking")
   # 4) Otherwise, default to local branch name
   #    (note: this can create a new (non-tracking) remote branch)
-  if ! rb=$(git config --get "remote.$remote.push")
+  if [ -n "$remote_branch" ] ; then
+    rb=$remote_branch
+  elif ! rb=$(git config --get "remote.$remote.push")
   then
     if ! rb=$(git config --get "branch.$branch.merge")
     then
@@ -662,7 +670,11 @@ while [ x"$1" != x-- ] ; do
     -q|--quiet) quiet=y ;;
     -C) colour=y ;;
     -o|--origin)
-      origin_name=$1
+      origin_name=$2
+      shift
+      ;;
+    -b|--branch|--remote-branch)
+      remote_branch=$2
       shift
       ;;
   esac
@@ -774,7 +786,7 @@ case $action in
       echo "smooth: Changing directory to ${@: -1}"
       cd "${@: -1}"
 
-      # strip off all but the last argument when calling dispatch()
+      # strip off the last argument when calling dispatch()
       let num_subtract_one=$(($# - 1))
       $dispatch $rtype "${@:1:$num_subtract_one}"
     else
