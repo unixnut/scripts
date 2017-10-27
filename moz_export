@@ -48,7 +48,6 @@ if [ $nested = n ] ; then
 <H1>Bookmarks Menu</H1>
 
 <DL><p>
-    <HR>
 EOT_1
 fi
 
