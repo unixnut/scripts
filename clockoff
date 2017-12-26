@@ -1,0 +1,4 @@
+#! /bin/sh
+# clockon (Bourne shell script) -- Output a shift end marker
+
+echo "=> shift ended $(date "$@" '+%Y-%m-%d %H:%M')"

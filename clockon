@@ -1,0 +1,4 @@
+#! /bin/sh
+# clockon (Bourne shell script) -- Output a shift start marker
+
+echo "=> shift started $(date "$@" '+%Y-%m-%d %H:%M')"
