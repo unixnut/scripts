@@ -79,9 +79,9 @@ echo ".separator ¬
                              INDENT, $3, $4 / 1000000, $5 / 1000000, $2)
                       if ($7 != "") printf("%s    <DD>%s\n", INDENT, $7) }
             # pass indent string so it can be extended
-            $1 == 2 { cmd=sprintf("%s -i \"%s\" %d", SELF, INDENT, $6);
+            $1 == 2 { cmd=sprintf("%s -i \"%s\" %d \"%s\"", SELF, INDENT, $6, FILE);
                       system(cmd); }
-            $1 == 3 { printf("%s    <HR>\n", INDENT) }' INDENT="$indent" SELF=$0
+            $1 == 3 { printf("%s    <HR>\n", INDENT) }' INDENT="$indent" SELF=$0 FILE=$file
 
 # Menu trailer
 echo "$indent</DL><p>"
