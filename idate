@@ -1,0 +1,20 @@
+#! /bin/sh
+# idate (Bourne shell script) -- Converts UK/AU dates to ISO 8601 format
+#
+# Accepts dates of the form 16/9/16 or 7/11/2016 on the command line or standard input
+
+convert()
+{
+  date -d $(echo $1 | sed 's@\([^-/]*.\)\([^-/]*.\)\(.*\)@\2\1\3@') +%F
+}
+
+
+if [ $# -eq 0 ] ; then
+  while read date ; do
+    convert $date
+  done
+else
+  for date ; do
+    convert $date
+  done
+fi
