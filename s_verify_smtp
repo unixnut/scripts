@@ -1,0 +1,6 @@
+#! /bin/sh
+# s_verify_smtp (Bourne shell script) -- Connects to an SMTP server, invokes STARTTLS and verifies the X.509 certificate
+
+openssl s_client -connect $1:587 -starttls smtp -${2:-tls1} -verify 20 -CApath $SSL_PATH/certs/ < /dev/null |
+  sed "/^-----BEGIN CERTIFICATE-----/,/^-----END CERTIFICATE-----/d" |
+  ${PAGER:-less}

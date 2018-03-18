@@ -1,12 +1,12 @@
 #! /bin/sh
-# c_issuer (Bourne shell script) -- Shows issuer of PEM-format X.509 certificate(s)
-#
-# Works similar to c_issuer from the 'openssl' package, but without bugs
+# c_dump (Bourne shell script) -- Dumps info about PEM-format X.509 certificate(s)
 #
 # Tolerates failure to open a file by not showing anything other than the
 # openssl error.
 # Accepts "-" as an argument to read that cert from stdin.
 # By default, reads a cert from stdin.
+#
+# Uses a pager per file
 
 if [ $# -eq 0 ] ; then
   set -- -
@@ -17,12 +17,12 @@ OPTS="-nameopt esc_2253,esc_ctrl,esc_msb,utf8,dump_nostr,dump_unknown,dump_der,s
 
 for file do
   if [ "$file" = - ] ; then
-    info="$(openssl x509 -issuer $OPTS -noout)"
+    info="$(openssl x509 -text $OPTS -noout)"
   else
-    if ! info="$(openssl x509 -issuer $OPTS -noout -in "$file")"
+    if ! info="$(openssl x509 -text $OPTS -noout -in "$file")"
     then
       continue
     fi
   fi
-  printf '%s\t%s\n' "$file" "$info"
+  echo "$info" | ${PAGER:-less}
 done

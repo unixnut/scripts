@@ -1,5 +1,5 @@
 #! /bin/sh
-# c_info (Bourne shell script) -- Dumps info about PEM-format X.509 certificate(s)
+# c_info (Bourne shell script) -- Shows info about PEM-format X.509 certificate(s)
 #
 # Works similar to c_info from the 'openssl' package, but without bugs
 #
@@ -14,6 +14,9 @@ if [ $# -eq 0 ] ; then
   set -- -
 fi
 
+# Similar to "-nameopt RFC2253" but with semicolons
+OPTS="-nameopt esc_2253,esc_ctrl,esc_msb,utf8,dump_nostr,dump_unknown,dump_der,sep_semi_plus_space,dn_rev,sname"
+
 for file do
   if [ -n "$prevfile" ] ; then
     echo "--------"
@@ -21,9 +24,9 @@ for file do
   prevfile="$file"   # Do this here to avoid missing out in case of openssl error
 
   if [ "$file" = - ] ; then
-    info="$(openssl x509 -subject -issuer -startdate -enddate -noout)"
+    info="$(openssl x509 -subject -issuer -dates $OPTS -noout)"
   else
-    if ! info="$(openssl x509 -subject -issuer -startdate -enddate -noout -in "$file")"
+    if ! info="$(openssl x509 -subject -issuer -dates $OPTS -noout -in "$file")"
     then
       continue
     fi

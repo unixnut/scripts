@@ -10,6 +10,9 @@ if [ $# -eq 0 ] ; then
   set -- -
 fi
 
+# Similar to "-nameopt RFC2253" but with semicolons
+OPTS="-nameopt esc_2253,esc_ctrl,esc_msb,utf8,dump_nostr,dump_unknown,dump_der,sep_semi_plus_space,dn_rev,sname"
+
 for file do
   if [ -n "$prevfile" ] ; then
     echo "--------"
@@ -17,9 +20,9 @@ for file do
   prevfile="$file"   # Do this here to avoid missing out in case of openssl error
 
   if [ "$file" = - ] ; then
-    info="$(openssl req -text -noout)"
+    info="$(openssl req -text $OPTS -noout)"
   else
-    if ! info="$(openssl req -text -noout -in "$file")"
+    if ! info="$(openssl req -text $OPTS -noout -in "$file")"
     then
       continue
     fi

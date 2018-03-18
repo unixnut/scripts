@@ -1,0 +1,23 @@
+#! /bin/sh
+# c_fprint (Bourne shell script) -- Shows subject of PEM-format X.509 certificate(s)
+#
+# Tolerates failure to open a file by not showing anything other than the
+# openssl error.
+# Accepts "-" as an argument to read that cert from stdin.
+# By default, reads a cert from stdin.
+
+if [ $# -eq 0 ] ; then
+  set -- -
+fi
+
+for file do
+  if [ "$file" = - ] ; then
+    info="$(openssl x509 -fingerprint -sha256 -noout $OPTS)"
+  else
+    if ! info="$(openssl x509 -fingerprint -sha256 -noout $OPTS -in "$file")"
+    then
+      continue
+    fi
+  fi
+  printf '%s\t%s\n' "$file" "$info"
+done

@@ -12,11 +12,14 @@ if [ $# -eq 0 ] ; then
   set -- -
 fi
 
+# Similar to "-nameopt RFC2253" but with semicolons
+OPTS="-nameopt esc_2253,esc_ctrl,esc_msb,utf8,dump_nostr,dump_unknown,dump_der,sep_semi_plus_space,dn_rev,sname"
+
 for file do
   if [ "$file" = - ] ; then
-    info="$(openssl x509 -subject -noout)"
+    info="$(openssl x509 -subject $OPTS -noout)"
   else
-    if ! info="$(openssl x509 -subject -noout -in "$file")"
+    if ! info="$(openssl x509 -subject $OPTS -noout -in "$file")"
     then
       continue
     fi

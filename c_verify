@@ -1,0 +1,16 @@
+#! /bin/sh
+# c_verify (Bourne shell script) -- Verifies a PEM-format X.509 certificate
+#
+# Usage: c_verify <cert> <ca_cert>
+
+if [ $# -ne 2 ] ; then
+  echo "Usage: c_verify <cert> <ca_cert>" >&2
+  exit 1
+fi
+
+if [ -z "$SSL_PATH" ] ; then
+  echo 'c_verify: ERROR: $SSL_PATH not set' >&2
+  exit 2
+fi
+
+openssl verify -CApath $SSL_PATH/certs -CAfile "$2" "$1"
