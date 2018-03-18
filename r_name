@@ -1,0 +1,23 @@
+#! /bin/sh
+# r_info (Bourne shell script) -- Shows subject of a PEM-format X.509 certificate request
+#
+# Tolerates failure to open a file by not showing anything other than the
+# openssl error.
+# Accepts "-" as an argument to read that cert from stdin.
+# By default, reads a cert from stdin.
+
+if [ $# -eq 0 ] ; then
+  set -- -
+fi
+
+for file do
+  if [ "$file" = - ] ; then
+    info="$(openssl req -subject -noout)"
+  else
+    if ! info="$(openssl req -subject -noout -in "$file")"
+    then
+      continue
+    fi
+  fi
+  printf '%s\t%s\n' "$file" "$info"
+done

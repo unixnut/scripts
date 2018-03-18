@@ -1,0 +1,25 @@
+#! /bin/sh
+# c_issuer (Bourne shell script) -- Shows issuer of PEM-format X.509 certificate(s)
+#
+# Works similar to c_issuer from the 'openssl' package, but without bugs
+#
+# Tolerates failure to open a file by not showing anything other than the
+# openssl error.
+# Accepts "-" as an argument to read that cert from stdin.
+# By default, reads a cert from stdin.
+
+if [ $# -eq 0 ] ; then
+  set -- -
+fi
+
+for file do
+  if [ "$file" = - ] ; then
+    info="$(openssl x509 -issuer -noout)"
+  else
+    if ! info="$(openssl x509 -issuer -noout -in "$file")"
+    then
+      continue
+    fi
+  fi
+  printf '%s\t%s\n' "$file" "$info"
+done

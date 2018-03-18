@@ -1,0 +1,29 @@
+#! /bin/sh
+# r_dump (Bourne shell script) -- Dumps info about PEM-format X.509 certificate request(s)
+#
+# Tolerates failure to open a file by not showing anything other than the
+# openssl error.
+# Accepts "-" as an argument to read that cert from stdin.
+# By default, reads a cert from stdin.
+
+if [ $# -eq 0 ] ; then
+  set -- -
+fi
+
+for file do
+  if [ -n "$prevfile" ] ; then
+    echo "--------"
+  fi
+  prevfile="$file"   # Do this here to avoid missing out in case of openssl error
+
+  if [ "$file" = - ] ; then
+    info="$(openssl req -text -noout)"
+  else
+    if ! info="$(openssl req -text -noout -in "$file")"
+    then
+      continue
+    fi
+  fi
+  echo "$file"
+  echo "$info"
+done

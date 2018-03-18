@@ -1,0 +1,33 @@
+#! /bin/sh
+# c_info (Bourne shell script) -- Dumps info about PEM-format X.509 certificate(s)
+#
+# Works similar to c_info from the 'openssl' package, but without bugs
+#
+# Tolerates failure to open a file by not showing anything other than the
+# openssl error.
+# Accepts "-" as an argument to read that cert from stdin.
+# By default, reads a cert from stdin.
+#
+# Differs from the 'openssl' package's command by also showing the start date
+
+if [ $# -eq 0 ] ; then
+  set -- -
+fi
+
+for file do
+  if [ -n "$prevfile" ] ; then
+    echo "--------"
+  fi
+  prevfile="$file"   # Do this here to avoid missing out in case of openssl error
+
+  if [ "$file" = - ] ; then
+    info="$(openssl x509 -subject -issuer -startdate -enddate -noout)"
+  else
+    if ! info="$(openssl x509 -subject -issuer -startdate -enddate -noout -in "$file")"
+    then
+      continue
+    fi
+  fi
+  echo "$file"
+  echo "$info"
+done

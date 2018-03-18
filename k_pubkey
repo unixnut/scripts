@@ -1,0 +1,29 @@
+#! /bin/sh
+# k_pubkey (Bourne shell script) -- Dumps the pubkey from PEM-format RSA private key(s)
+#
+# Tolerates failure to open a file by not showing anything other than the
+# openssl error.
+# Accepts "-" as an argument to read that cert from stdin.
+# By default, reads a cert from stdin.
+
+if [ $# -eq 0 ] ; then
+  set -- -
+fi
+
+for file do
+  if [ -n "$prevfile" ] ; then
+    echo "--------"
+  fi
+  prevfile="$file"   # Do this here to avoid missing out in case of openssl error
+
+  if [ "$file" = - ] ; then
+    info="$(openssl rsa -pubout)"
+  else
+    if ! info="$(openssl rsa -pubout -in "$file")"
+    then
+      continue
+    fi
+  fi
+  echo "$file"
+  echo "$info"
+done

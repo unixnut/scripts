@@ -1,0 +1,29 @@
+#! /bin/sh
+# k_dump (Bourne shell script) -- Dumps info about PEM-format RSA private key(s)
+#
+# Tolerates failure to open a file by not showing anything other than the
+# openssl error.
+# Accepts "-" as an argument to read that cert from stdin.
+# By default, reads a cert from stdin.
+
+if [ $# -eq 0 ] ; then
+  set -- -
+fi
+
+for file do
+  if [ -n "$prevfile" ] ; then
+    echo "--------"
+  fi
+  prevfile="$file"   # Do this here to avoid missing out in case of openssl error
+
+  if [ "$file" = - ] ; then
+    info="$(openssl rsa -text -noout)"
+  else
+    if ! info="$(openssl rsa -text -noout -in "$file")"
+    then
+      continue
+    fi
+  fi
+  echo "$file"
+  echo "$info"
+done

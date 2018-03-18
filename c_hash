@@ -1,0 +1,25 @@
+#! /bin/sh
+# c_hash (Bourne shell script) -- Shows hash of PEM-format X.509 certificate(s)
+#
+# Works similar to c_hash from the 'openssl' package, but without bugs
+#
+# Tolerates failure to open a file by not showing anything other than the
+# openssl error.
+# Accepts "-" as an argument to read that cert from stdin.
+# By default, reads a cert from stdin.
+
+if [ $# -eq 0 ] ; then
+  set -- -
+fi
+
+for file do
+  if [ "$file" = - ] ; then
+    hash=$(openssl x509 -hash -noout)
+  else
+    if ! hash=$(openssl x509 -hash -noout -in "$file")
+    then
+      continue
+    fi
+  fi
+  echo "$hash.0 => $file"
+done
