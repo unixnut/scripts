@@ -1,0 +1,4 @@
+#! /bin/sh
+# mygrep (Bourne shell script) -- 
+
+grep $MY_GREP_OPTIONS "$@"
