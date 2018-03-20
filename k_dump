@@ -24,6 +24,6 @@ for file do
       continue
     fi
   fi
-  echo "$file"
-  echo "$info"
+  # TO-DO: Uses $file in less prompt
+  echo "$info" | ${PAGER:-less}
 done

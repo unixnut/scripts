@@ -1,8 +1,8 @@
 #! /bin/sh
 # s_dump_http (Bourne shell script) -- Connects to an SSL HTTP server and shows info about the X.509 certificate for a given domain
 
-# Similar to "-nameopt RFC2253" but with semicolons
-OPTS="-nameopt esc_2253,esc_ctrl,esc_msb,utf8,dump_nostr,dump_unknown,dump_der,sep_semi_plus_space,dn_rev,sname"
+# Similar to "-nameopt RFC2253" but with semicolons and without dn_rev
+OPTS="-nameopt esc_2253,esc_ctrl,esc_msb,utf8,dump_nostr,dump_unknown,dump_der,sep_semi_plus_space,sname"
 SELF=$(basename "$0")
 
 if [ $# -lt 1 -o $# -gt 3 ] ; then

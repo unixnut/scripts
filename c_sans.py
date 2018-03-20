@@ -9,9 +9,13 @@
 # Licence:   This file is released under the GNU General Public License
 #
 '''Description:
-  
-Usage: 
-Options:
+    Show the X509v3 Subject Alternative Names for PEM-format X.509 certificate(s)
+
+    If no arguments are supplied, a certificate is expected on standard input.
+    A "-" may be used as well as file names, to represent standard input.
+
+Usage:   c_sans.py [ <file> | - ] ...
+Options: nil
   
 '''
 # Licence details:

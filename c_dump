@@ -12,8 +12,8 @@ if [ $# -eq 0 ] ; then
   set -- -
 fi
 
-# Similar to "-nameopt RFC2253" but with semicolons
-OPTS="-nameopt esc_2253,esc_ctrl,esc_msb,utf8,dump_nostr,dump_unknown,dump_der,sep_semi_plus_space,dn_rev,sname"
+# Similar to "-nameopt RFC2253" but with semicolons and without dn_rev
+OPTS="-nameopt esc_2253,esc_ctrl,esc_msb,utf8,dump_nostr,dump_unknown,dump_der,sep_semi_plus_space,sname"
 
 for file do
   if [ "$file" = - ] ; then
@@ -24,5 +24,6 @@ for file do
       continue
     fi
   fi
+  # TO-DO: Uses $file in less prompt
   echo "$info" | ${PAGER:-less}
 done
