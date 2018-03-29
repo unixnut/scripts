@@ -1,0 +1,61 @@
+#! /bin/sh
+# ifaddr (Bourne shell script) -- Pretty-print the output of ""
+#
+# Usage: ifaddr [ -v ]
+#
+# TO-DO: colourise with rainbow, etc.
+
+if [ "$1" = "-v" ] ; then
+  params="SHOW_HW=1"
+fi
+
+ip -o addr show |
+  awk '# Script parameters: SHOW_HW (optional), NO_SKIP_LL (optional)
+
+  function lprint(line)
+  {
+    if (line !~ /^\t/)
+      print "";
+    print line
+  }
+
+  # Main processing logic that strips interface name off address lines and
+  # indents them with a tab; also removes surplus information and
+  # everything after a backslash
+  {
+    gsub(/(qdisc|qlen) [^ \\]* */, "");
+    if (previd != $1)
+      line = gensub(/^[0-9]*: ([^\\]*).*/, "\\1", 1);
+    else
+      line = gensub(/^[0-9]*: [^ ]* *([^\\]*).*/, "\t\\1", 1);
+    # Used to track interface change
+    previd = $1;
+  }
+
+  # Ignore IPv6 link-local addresses
+  /scope link/ && NO_SKIP_LL != 1 { next }
+
+  # Grab the MAC address from the info after the backslash
+  SHOW_HW && /\\    link\/[^nl]/ { line = line gensub(/.*\\    (link\/[^ ]* *[^ ]*).*/, "\n\t\\1", 1); }
+
+  {
+    # Secondary formatting logic; puts IPv4 addr label before the address
+    line = gensub(/(\tinet )(.*scope [^ \\]*) (.*)/, "\\1\"\\3\" \\2", 1, line);
+
+    # Sorting logic; loopback first, tunnels last
+    if ($2 ~ /lo/)
+      loopback[lcount++] = line;
+    else if ($2 ~ /^tun/)
+      tunnels[tcount++] = line;
+    else
+      other[ocount++] = line
+  }
+
+  END {
+        # Print lines from the arrays, preceeding each interface line with a newline
+        # (except for loopback, which is shown first)
+        for (i in loopback) print loopback[i];
+        for (i in other) lprint(other[i]);
+        for (i in tunnels) lprint(tunnels[i]);
+      }
+' $params
