@@ -20,5 +20,11 @@ regex_match()
 }
 
 
-
-
+# Merges multiple lines on stardard input into one line, separated by a space
+# (by default) or the argument if specified.
+mergelines() {
+  sed -e ': start'  \
+      -e 'N'        \
+      -e "s/\\n/${1:- }/"  \
+      -e 't start'
+}

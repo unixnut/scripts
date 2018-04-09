@@ -5,6 +5,12 @@
 #
 # TO-DO: colourise with rainbow, etc.
 
+if ! awk --version 2>&1 | grep -q '^GNU Awk'
+then
+  echo 'ifaddr: Fatal error: "GNU awk" required' >&2
+  exit 3
+fi
+
 if [ "$1" = "-v" ] ; then
   params="SHOW_HW=1"
 fi
