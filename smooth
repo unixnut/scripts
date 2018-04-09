@@ -11,7 +11,7 @@
 #   -o      (Git only) Specify remote to create/use
 #   -b      (Git only) Specify remote branch to push to
 #
-# Version: 1.4.1
+# Version: 1.4.2
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: git svn hg source-control wrapper
 # Requires: bash v4.0+
@@ -65,7 +65,8 @@ svn_toplevel()
       else
         # but if there is a candidate, do the magic test: see if there's a
         # change in repo UUID
-        if [ $(svn_uuid "$dir") = $(svn_uuid "$toplevel") ] ; then
+        ## echo "[$dir] [$toplevel]" >&2
+        if [ "$(svn_uuid "$dir")" = "$(svn_uuid "$toplevel")" ] ; then
           # if no change, appoint a new candidate
           toplevel=$dir
         else
