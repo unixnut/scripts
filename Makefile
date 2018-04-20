@@ -1,7 +1,12 @@
 PREFIX=/usr/local
 USER_SCRIPTS=aws-host-fingerprints find_swapfiles seconds milliseconds \
   microseconds nanoseconds pem-foreach pgp_verify showcn fileinfo file-format \
-  smooth _s.sh
+  smooth _s.sh \
+  c_dump c_fprint c_hash c_info c_issuer c_name c_sans.py c_verify \
+  k_dump k_pubkey r_dump r_name \
+  s_dump_http s_dump_imap s_dump_imaps s_dump_smtp \
+  s_verify_http s_verify_imap s_verify_imaps s_verify_smtp
+USER_SCRIPT_LINKS=c_fp c_sans
 # ... TO-DO: mkhtml or makehtml
 ADMIN_SCRIPTS=clowncar zonedate userlist hostrename reactivate
 
@@ -11,7 +16,7 @@ update:
 
 install: install_user install_admin install_doc
 
-install_user: $(PREFIX)/bin $(USER_SCRIPTS:%=$(PREFIX)/bin/%)
+install_user: $(PREFIX)/bin $(USER_SCRIPTS:%=$(PREFIX)/bin/%) $(USER_SCRIPT_LINKS:%=$(PREFIX)/bin/%)
 
 install_admin: $(PREFIX)/sbin $(ADMIN_SCRIPTS:%=$(PREFIX)/sbin/%)
 
@@ -39,6 +44,13 @@ $(PREFIX)/bin/%: %
 
 $(PREFIX)/sbin/%: %
 	install -p '$<' '$@'
+
+# -- explicit rules to override implicit rules for certain targets --
+$(PREFIX)/bin/c_fp:
+	ln -s --force c_fprint $(PREFIX)/bin/c_fp
+
+$(PREFIX)/bin/c_sans:
+	ln -s --force c_sans.py $(PREFIX)/bin/c_sans
 
 # -- extra requirements --
 $(PREFIX)/bin/smooth: $(PREFIX)/bin/_s.sh
