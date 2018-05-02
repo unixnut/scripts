@@ -37,20 +37,28 @@ LINE=" +---------+---------+----------------------------------------------------
 function parse_fp {
     local algo=$1 n=0 filter line
 
-    # Older OpenSSH versions don't include the hash algorithm prefix
     if [ "$2" = old ] ; then
-        filter="s/^\\([^ =]*\\).*/${algo^^}:\\1/"
+        # Older OpenSSH versions don't include the hash algorithm prefix
+        filter="s/^\\([^ =]*\\).*/\\1/"
     else
-        filter=
+        # Newer OpenSSH versions do include the hash algorithm prefix; remove
+        filter="s/^${algo^^}:\\([^ =]*\\).*/\\1/"
     fi
 
-    # IFS 
     while read line
     do
         n=$((n + 1))
         if [[ $n -eq 1 ]] ; then
             ALGOS[$algo]=$(echo "$line" | sed "$filter")
         else
+            # Alter old versions' ASCII art box to include algorithm
+            if [ "$line" = "+-----------------+" ] ; then
+                case $algo in
+                    md5)    line="+------[MD5]------+" ;;
+                    sha256) line="+----[SHA256]-----+" ;;
+                esac
+            fi
+
             ASCII[$n]="${ASCII[$n]} ${line}"
         fi
     done
@@ -96,6 +104,7 @@ do
             parse_fp md5 old < <(ssh-keygen -lv -f "$host_key" |
                                      sed '/^[0-9]/ s/^[^ ]* \([^ ]*\).*/\1/')
             # Note: no ASCII art
+            # TO-DO: Use https://github.com/atoponce/keyart Python script
             parse_fp sha256 old < <(cut -f2 -d' ' "$host_key" |
                                         base64 -d |
                                         openssl dgst -sha256 -binary |
@@ -112,3 +121,9 @@ echo
 for line in "${ASCII[@]}"; do
     echo "$line"
 done
+
+
+# vim: set tabstop=4 shiftwidth=4 :
+# Local Variables:
+# tab-width: 4
+# end:

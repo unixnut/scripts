@@ -1,0 +1,21 @@
+#! /bin/sh
+# ruby_wrapper (Bourne shell script) -- Finds and runs a Ruby gem's executable
+#
+# How to install a Ruby command line tool that's a gem called "xyz":
+#   1) install a copy of this script as /usr/local/lib/ruby_wrapper
+#   2) modify the copy to use your desired ruby
+#   3) Run "gem1.9.1 install xyz" (change version to match step 2)
+#   4) Run "ln -s /usr/local/lib/ruby_wrapper /usr/local/bin/xyz"
+#
+# You may need to use sudo to run the commands.
+#
+# TO-DO: Find latest installed Ruby and use that
+
+RUBY=/usr/bin/ruby1.9.1
+GEM_TOOL=/usr/bin/gem1.9.1
+SELF="${0##*/}"
+
+gem_path=$($GEM_TOOL which $SELF)
+lib_dir="${gem_path%/*}"
+executable="${lib_dir%/*}/bin/$SELF"
+exec $RUBY "$executable" "$@"
