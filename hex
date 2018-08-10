@@ -1,0 +1,106 @@
+#! /usr/bin/python
+# vim: set fileencoding=utf-8 tabstop=4 shiftwidth=4 :
+# hex (Python script) -- Print decoded hex string
+#
+# Version:   1.0
+# Copyright: (c)2018 Alastair Irvine <alastair@plug.org.au>
+# Keywords:  hex decode
+# Notice:    
+# Licence:   This file is released under the GNU General Public License
+#
+'''Description: Decodes the command-line parameter, or stdin
+  
+Usage:   hex [ <string> ]
+Options:
+  
+'''
+# Licence details:
+#     This program is free software; you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation; either version 2 of the License, or (at
+#     your option) any later version.
+#
+#     See http://www.gnu.org/licenses/gpl-2.0.html for more information.
+#
+#     You can find the complete text of the GPLv2 in the file
+#     /usr/share/common-licenses/GPL-2 on Debian systems.
+#     Or see the file COPYING in the same directory as this program.
+#
+#
+# TO-DO:
+
+from __future__ import print_function
+import sys
+import getopt
+import sys, binascii
+
+
+self="hex"
+allowed_options='hd'
+allowed_long_options=['help']
+
+
+# *** CLASSES ***
+
+# *** FUNCTIONS ***
+def show_help(dest=sys.stdout):
+    print(__doc__.rstrip(), file=dest)
+
+
+def report_error(msg):
+    print(self + ": Error: " + msg, file=sys.stderr)
+
+
+def report_warning(msg):
+    print(self + ": Warning: " + msg, file=sys.stderr)
+
+
+def report_notice(msg):
+    print(self + ": Notice: " + msg, file=sys.stderr)
+
+
+def process(source):
+    for line in source:
+        print(binascii.unhexlify(line))
+
+
+# *** MAINLINE ***
+if __name__ == '__main__':
+    # == Command-line parsing ==
+    # -- defaults --
+    debug = 0
+
+    # -- option handling --
+    try:
+        optlist, args = getopt.getopt(sys.argv[1:], allowed_options, allowed_long_options)
+    except getopt.GetoptError as e:
+        report_error(e)
+        sys.exit(1)
+
+    # Create a special dict object that defaults to False for unspecified options
+    from collections import defaultdict
+    params = defaultdict(bool)
+
+    for option, opt_arg in optlist:
+        if option == "-n":
+            params["no_fetch"] = True
+        elif option == "-d":
+            debug += 1
+        elif option == "-h" or option == "--help":
+            show_help()
+            sys.exit(0)
+
+    # -- argument checking --
+    ## if len(args) not in (2, 3):
+    ##     report_error("Invalid command-line parameters.")
+    ##     print("", file=sys.stderr)
+    ##     show_help(sys.stderr)
+    ##     sys.exit(1)
+
+    # -- argument handling --
+    if len(args) == 0:
+        source = (l.rstrip() for l in sys.stdin)
+    else:
+        source = iter(args)
+
+    process(source)
