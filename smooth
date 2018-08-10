@@ -11,7 +11,7 @@
 #   -o      (Git only) Specify remote to create/use
 #   -b      (Git only) Specify remote branch to push to
 #
-# Version: 1.4.2
+# Version: 1.4.3
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: git svn hg source-control wrapper
 # Requires: bash v4.0+
@@ -36,6 +36,7 @@
 #   + 'init' action: detect if http[s] URL hosts a Mercurial repo
 #   + hg commit functions
 #   + need a means to override 'remote.<name>.push' branch
+#   + convert Mercurial hg@host:[path] repo locations to ssh://[user@]host[:port]/[path] format
 
 self=$(basename "$0")
 allowed_options=dsqCfrMGo:b:
@@ -833,9 +834,14 @@ case $action in
       maybe_start_arggroup "$(dir_only "$arg")"
 
       # Append the current argument to the existing or new list, but first
-      # strip off the part of the path between the current directory and the toplevel
-      # FIXME: readlink translates symlinks to referents
-      arg_fullpath=$(readlink -f "$arg")
+      # strip off the path fragment between current directory and the toplevel
+      # (avoid using readlink when the arg is a symlink as this translates
+      # symlinks to referents)
+      if [ -L "$arg" ] ; then
+        arg_fullpath=$(readlink -f "$(dirname "$arg")")/${arg##*/}
+      else
+        arg_fullpath=$(readlink -f "$arg")
+      fi
       if [ "$arg_fullpath" = "$toplevel" ] ; then
         args[${#args[@]}]=.
       else

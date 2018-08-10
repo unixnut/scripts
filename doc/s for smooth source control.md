@@ -70,9 +70,10 @@ name.
 | `s **fp**` (forget-patch)   | N/A  | `git reset --patch HEAD` | N/A | | |
 | `s **j**ump`  | `svn -r`     | `git_smart_jump` | `hg update -r` | | |
 | `s **z**` (undo)   | `echo carefully use 'svn revert'`  | `git reset HEAD^` | `hg rollback` | | |
+| `s **x**` (extra-origin) | N/A | `git git remote add` | N/A | | |
 
 template: | `s ****`  | `svn `  | `git `      | `hg ` | | |
-<br>Unused command shortcuts: `kxy`
+<br>Unused command shortcuts: `ky`
 
 Merging and Tagging are deliberately ignored for now.
 
