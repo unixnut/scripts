@@ -11,7 +11,7 @@
 #   -o      (Git only) Specify remote to create/use
 #   -b      (Git only) Specify remote branch to push to
 #
-# Version: 1.4.3
+# Version: 1.4.4
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: git svn hg source-control wrapper
 # Requires: bash v4.0+
@@ -772,6 +772,8 @@ case $action in
       case $url in
         git://*|*.git|https://git*|http://git*|https://*.github.io|https://gist.github.com/*|git@*) rtype=git ;;
         http://bitbucket.org/*|https://bitbucket.org/*) rtype=git ;;
+        ssh://git-codecommit*|git-codecommit*) rtype=git ;;
+        http*visualstudio.com/*) rtype=git ;;
         svn+ssh:*|http://*/svn/*) rtype=svn ;;
         *) rtype=hg ;;
       esac
@@ -779,6 +781,9 @@ case $action in
 
     if [ -n "$origin_name" ] ; then
       extra_opts="$extra_opts -o $origin_name"
+    fi
+    if [ -n "$remote_branch" ] ; then
+      extra_opts="$extra_opts --branch=$remote_branch"
     fi
 
     # check if the last argument is an existing directory
