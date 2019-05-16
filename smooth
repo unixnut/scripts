@@ -11,7 +11,7 @@
 #   -o      (Git only) Specify remote to create/use
 #   -b      (Git only) Specify remote branch to push to
 #
-# Version: 1.4.4
+# Version: 1.4.5
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: git svn hg source-control wrapper
 # Requires: bash v4.0+
@@ -109,8 +109,8 @@ git_which_branch()
   ## # force output of branch name
   ## [ $debug -ge 3 ] && exec 2>&1
 
-  if [ -n "$branch" ] ; then
-    echo "$branch"
+  if [ -n "$remote_branch" ] ; then
+    echo "$remote_branch"
   else
     git_current_branch
   fi
@@ -122,7 +122,14 @@ git_which_branch()
 # the branch doesn't exist or doesn't have a remote.
 git_remote()
 {
-  git config --get "branch.${1:-$(git_which_branch)}.remote"
+  local branch
+
+  branch=${1:-$(git_which_branch)}
+  if ! git config --get "branch.$branch.remote"
+  then
+    echo "smooth: WARNING: branch '$branch' doesn't have a remote" >&2
+    return 1
+  fi
 }
 
 
@@ -132,10 +139,8 @@ git_url()
 {
   local r
 
-  if ! r=$(git_remote)
+  if r=$(git_remote)
   then
-    echo "smooth: WARNING: branch '$branch' doesn't have a remote" >&2
-  else
     # Get the origin ID for the branch and look up its URL
     git config --get "remote.$r.url"
   fi

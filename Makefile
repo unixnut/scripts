@@ -1,7 +1,7 @@
 PREFIX=/usr/local
 USER_SCRIPTS=aws-host-fingerprints find_swapfiles seconds milliseconds \
   microseconds nanoseconds pem-foreach pgp_verify showcn fileinfo file-format \
-  smooth _s.sh \
+  smooth _s.sh ssh_fprint \
   c_dump c_fprint c_hash c_info c_issuer c_name c_sans.py c_verify \
   k_dump k_pubkey r_dump r_name \
   s_dump_http s_dump_imap s_dump_imaps s_dump_smtp \
