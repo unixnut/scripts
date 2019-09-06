@@ -1,0 +1,13 @@
+#! /bin/sh
+# sm_save (Bourne shell script) -- Saves titles and desktop numbers of most SeaMonkey windows
+#
+# Windows with title "SeaMonkey" are not saved because of ambiguity
+#
+# TO-DO: save co-ordinates to resolve ambiguity
+
+xdotool search --name ' - SeaMonkey$' |
+  xargs -I '{}' xwininfo -id '{}' -wm |
+  awk '/^xwininfo:/ { id = $4; title = substr($0, index($0, "\"")); desktop = -1 }
+       /Displayed on desktop/ { desktop = $4 }
+       /Normal$/ { print id, desktop, title }' \
+      > tmp/sm_latest_windows.txt

@@ -1,0 +1,4 @@
+#! /bin/bash
+# oprint (bash script) -- Send files to mutt's 'print' alias
+
+eval "mutt -s 'print please' $(for file ; do printf '%s %q ' -a "$file" ; done) -- print  < /dev/null"

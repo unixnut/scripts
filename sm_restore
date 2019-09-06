@@ -1,0 +1,10 @@
+#! /bin/sh
+# sm_restore (Bourne shell script) -- Move restored SeaMonkey windows to correct desktops
+
+while read id desktop title ; do
+  new_id=$(xdotool search --name "$(echo "$title" |
+                                      sed -e 's/^"/^/' -e 's/"$/$/' -e 's/\([][|()?.*+{}]\)/\\\1/g')")
+  if [ -n "$new_id" -a $desktop -ne -1 ] ; then
+    xdotool set_desktop_for_window $new_id $desktop
+  fi
+done < tmp/sm_latest_windows.txt
