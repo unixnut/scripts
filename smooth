@@ -11,7 +11,7 @@
 #   -o      (Git only) Specify remote to create/use
 #   -b      (Git only) Specify remote branch to push to
 #
-# Version: 1.4.5
+# Version: 1.4.6
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: git svn hg source-control wrapper
 # Requires: bash v4.0+
@@ -39,8 +39,8 @@
 #   + convert Mercurial hg@host:[path] repo locations to ssh://[user@]host[:port]/[path] format
 
 self=$(basename "$0")
-allowed_options=dsqCfrMGo:b:
-allowed_long_options=quiet,force,mercurial,git,origin=,branch=,remote-branch=
+allowed_options=dsqCfrMGo:b:m:
+allowed_long_options=quiet,force,mercurial,git,origin=,branch=,remote-branch=,message=
 
 
 # *** FUNCTIONS ***
@@ -241,12 +241,18 @@ git_print_tags()
 # Internal use only
 git_do_commit()
 {
+  local extra_args=()
+
+  if [ -n "$message" ] ; then
+    extra_args=(-m "$message")
+  fi
+
   if [ $git_use_staged = y ] ; then
-    git commit
+    git commit "${extra_args[@]}"
   elif [ $# -eq 0 -o "$*" = . ] ; then
-    git commit -a
+    git commit -a "${extra_args[@]}"
   else
-    git commit "$@"
+    git commit "${extra_args[@]}" "$@"
   fi
 }
 
@@ -682,6 +688,10 @@ while [ x"$1" != x-- ] ; do
       ;;
     -b|--branch|--remote-branch)
       remote_branch=$2
+      shift
+      ;;
+    -m|--message)
+      message=$2
       shift
       ;;
   esac
