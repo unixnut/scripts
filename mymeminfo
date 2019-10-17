@@ -1,0 +1,6 @@
+#! /bin/sh
+# mymeminfo (Bourne shell script) -- Shows all types of memory usage
+
+grep -e '^\(MemFree\|KernelStack\|Buffers\|PageTables\|AnonPages\|Slab\|SwapCached\|Cached\)' /proc/meminfo |$PAGER
+## awk '{total += $2} END { print total }'
+

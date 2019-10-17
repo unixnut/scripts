@@ -4,7 +4,7 @@
 if [ -d ~/Reading ] ; then
   reading_dir=~/Reading
 else
-  reading_dir=~/Desktop/Reading
+  reading_dir=~/Dropbox/Reading
 fi
 
 if [[ "$1" != http* && "$1" != ftp* && "$1" != www* && -d "$reading_dir/$1" ]] ; then

@@ -1,0 +1,4 @@
+#! /bin/sh
+# markdown2pdf (Bourne shell script) -- 
+
+pandoc "$1" -V geometry:margin=1in -o "${2-${1%.*}.pdf}"
