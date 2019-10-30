@@ -1,8 +1,8 @@
 #! /bin/bash
 # c*ls  (BASH script) -- Colourised ls wrappers that use a pager
 #
-# Version:   
-# Copyright: (c)2018 Alastair Irvine <alastair@plug.org.au>
+# Version:   0.9
+# Copyright: (c)2019 Alastair Irvine <alastair@plug.org.au>
 # Keywords:  
 # Notice:    
 # Licence:   This file is released under the GNU General Public License
@@ -174,6 +174,6 @@ for line in sys.stdin:
       print "%s%s%s" % ("".join(cols[0:size_column-ownership_cols]), multicol_output, "".join(cols[size_column+1:]))
   else:
     print line,' $size_column $inums $ownership_cols |
-  less -RS --prompt=M"[%pB\\%] $*"
+  less -RS --prompt=M"[%pB\\%] ${*//./\\.}"
   ##   sed "s/^\\(\\([^[:space:]]\\+[[:space:]]\\+\\)\\{1,$before_size_column\\}\\)\\([^[:space:]]\\+\\)/\\1[\\3]/" |
 

@@ -1,0 +1,10 @@
+#!/usr/bin/awk -f
+# colsum (AWK script) -- Prints the sum of a given column of the input (stdin or files)
+#
+# Usage: colsum [ <file>... ] [ COL=<n> ]
+#
+#   - COL (default 1) is the colsum to sum, with 1 being the first
+
+{ if (COL == 0) COL=1 }
+{ total += $(COL) }
+END { print total }
