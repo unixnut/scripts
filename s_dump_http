@@ -1,9 +1,20 @@
 #! /bin/sh
 # s_dump_http (Bourne shell script) -- Connects to an SSL HTTP server and shows info about the X.509 certificate for a given domain
+#
+# Version: 1.1
+# Copyright: (c) 2019 Alastair Irvine <alastair@plug.org.au>
+# Keywords: openssl, SSL, secure certificate
+# Licence: This file is released under the GNU General Public License
 
 # Similar to "-nameopt RFC2253" but with semicolons and without dn_rev
 OPTS="-nameopt esc_2253,esc_ctrl,esc_msb,utf8,dump_nostr,dump_unknown,dump_der,sep_semi_plus_space,sname"
 SELF=$(basename "$0")
+
+if [ "$1" = -P ] ; then
+  PORT=$2
+  shift
+  shift
+fi
 
 if [ $# -lt 1 -o $# -gt 3 ] ; then
   echo "Usage:  <servername> [ <sitename> ] [ <opts> ]" >&2
@@ -15,6 +26,6 @@ if [ -z "$SSL_PATH" ] ; then
   exit 2
 fi
 
-openssl s_client -connect $1:443 -servername ${2:-$1} -tls1 -CApath $SSL_PATH/certs/ < /dev/null |
+openssl s_client -connect $1:${PORT-443} -servername ${2:-$1} -tls1 -CApath $SSL_PATH/certs/ < /dev/null |
   openssl x509 -text $OPTS -noout |
   ${PAGER:-less}
