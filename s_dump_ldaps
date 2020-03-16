@@ -1,12 +1,12 @@
 #! /bin/sh
-# s_dump_imap (Bourne shell script) -- Connects to an IMAP server, invokes STARTTLS and shows info about the X.509 certificate
+# s_dump_ldap (Bourne shell script) -- Connects to an SSL LDAP server and shows info about the X.509 certificate for a given domain
 #
 # Version: 1.1
 # Copyright: (c) 2019 Alastair Irvine <alastair@plug.org.au>
-# Keywords: openssl, SSL, TLS, secure certificate
-# Licence: This file is released under the GNU General Public License v2
+# Keywords: openssl, SSL, secure certificate
+# Licence: This file is released under the GNU General Public License
 #
-# Uses "Server Name Indication" (SNI) with TLS
+# Uses "Server Name Indication" (SNI)
 
 # Similar to "-nameopt RFC2253" but with semicolons and without dn_rev
 OPTS="-nameopt esc_2253,esc_ctrl,esc_msb,utf8,dump_nostr,dump_unknown,dump_der,sep_semi_plus_space,sname"
@@ -31,6 +31,6 @@ if [ -z "$SSL_PATH" ] ; then
   fi
 fi
 
-openssl s_client -connect $1:${PORT-143} -starttls imap -servername ${2:-$1} -${3:-tls1} -CApath $SSL_PATH/certs/ < /dev/null |
+openssl s_client -connect $1:${PORT-636} -servername ${2:-$1} -${3:-tls1} -CApath $SSL_PATH/certs/ < /dev/null |
   openssl x509 -text $OPTS -noout |
   ${PAGER:-less}

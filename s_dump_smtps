@@ -1,12 +1,12 @@
 #! /bin/sh
-# s_dump_smtp (Bourne shell script) -- Connects to an SMTP server, invokes STARTTLS and shows info about the X.509 certificate
+# s_dump_smtps (Bourne shell script) -- Connects to an SSL SMTP server and shows info about the X.509 certificate for a given domain
 #
 # Version: 1.1
 # Copyright: (c) 2019 Alastair Irvine <alastair@plug.org.au>
 # Keywords: openssl, SSL, TLS, secure certificate
 # Licence: This file is released under the GNU General Public License v2
 #
-# Uses "Server Name Indication" (SNI) with TLS and EHLO
+# Uses "Server Name Indication" (SNI) with EHLO
 
 # Similar to "-nameopt RFC2253" but with semicolons and without dn_rev
 OPTS="-nameopt esc_2253,esc_ctrl,esc_msb,utf8,dump_nostr,dump_unknown,dump_der,sep_semi_plus_space,sname"
@@ -49,7 +49,8 @@ if [ -z "$SSL_PATH" ] ; then
   fi
 fi
 
-openssl s_client -connect $1:${PORT-587} -${3:-tls1} -CApath $SSL_PATH/certs/ \
-                 -starttls smtp -servername ${2:-$1} ${EHLO:+-name $EHLO} < /dev/null |
+# Note that 465 is not a standard port
+openssl s_client -connect $1:${PORT-465} -${3:-tls1} -CApath $SSL_PATH/certs/ \
+                 -servername ${2:-$1} ${EHLO:+-name $EHLO} < /dev/null |
   openssl x509 -text $OPTS -noout |
   ${PAGER:-less}

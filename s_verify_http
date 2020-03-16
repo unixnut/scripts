@@ -1,9 +1,36 @@
 #! /bin/sh
 # s_verify_http (Bourne shell script) -- Connects to an SSL HTTP server and verifies the X.509 certificate for a given domain
 #
+# Version: 1.1
+# Copyright: (c) 2019 Alastair Irvine <alastair@plug.org.au>
+# Keywords: openssl, SSL, TLS, secure certificate
+# Licence: This file is released under the GNU General Public License v2
+#
+# Uses "Server Name Indication" (SNI)
 # Note: Verifies the chain but won't actually compare the CN of the returned
 # cert agains the server name
 
-openssl s_client -connect $1:443 -servername ${2:-$1} -${3:-tls1} -verify 20 -CApath $SSL_PATH/certs/ < /dev/null |
+SELF=$(basename "$0")
+
+if [ "$1" = -P ] ; then
+  PORT=$2
+  shift
+  shift
+fi
+
+if [ $# -lt 1 -o $# -gt 3 ] ; then
+  echo "Usage: $SELF [ -P <port> ] <servername> [ <sitename> ] [ <opts> ]" >&2
+  exit 1
+fi
+
+if [ -z "$SSL_PATH" ] ; then
+  if [ -d /etc/pki/tls ] ; then
+    SSL_PATH=/etc/pki/tls
+  else
+    SSL_PATH=/etc/ssl
+  fi
+fi
+
+openssl s_client -connect $1:${PORT-443} -servername ${2:-$1} -${3:-tls1} -verify 20 -CApath $SSL_PATH/certs/ < /dev/null |
   sed "/^-----BEGIN CERTIFICATE-----/,/^-----END CERTIFICATE-----/d" |
   ${PAGER:-less}

@@ -1,6 +1,56 @@
 #! /bin/sh
 # s_verify_smtp (Bourne shell script) -- Connects to an SMTP server, invokes STARTTLS and verifies the X.509 certificate
+#
+# Version: 1.1
+# Copyright: (c) 2019 Alastair Irvine <alastair@plug.org.au>
+# Keywords: openssl, SSL, TLS, secure certificate
+# Licence: This file is released under the GNU General Public License v2
+#
+# Uses "Server Name Indication" (SNI) with TLS and EHLO
+# Note: Verifies the chain but won't actually compare the CN of the returned
+# cert agains the server name
 
-openssl s_client -connect $1:587 -starttls smtp -${2:-tls1} -verify 20 -CApath $SSL_PATH/certs/ < /dev/null |
+SELF=$(basename "$0")
+
+if [ "$1" = -P ] ; then
+  PORT=$2
+  shift
+  shift
+fi
+
+if [ "$1" = -E ] ; then
+  EHLO=$2
+  shift
+  shift
+else
+  # Reverse-resolve the external IPv4 address to get the EHLO hostname
+  # ...if the `dig` command exists
+  if type dig >/dev/null
+  then
+    ip=$(dig -4 +short myip.opendns.com a @resolver1.opendns.com)
+    if reverse_record=$(dig +short -x $ip)
+    then
+      # Removed the trailing "." from `dig` output
+      EHLO=${reverse_record%.}
+    fi
+  fi
+fi
+
+if [ $# -lt 1 -o $# -gt 3 ] ; then
+  echo "Usage: $SELF [ -P <port> ] [ -E <ehlo_domain> ] <servername> [ <sitename> ] [ <opts> ]" >&2
+  exit 1
+fi
+
+if [ -z "$SSL_PATH" ] ; then
+  if [ -d /etc/pki/tls ] ; then
+    SSL_PATH=/etc/pki/tls
+  else
+    SSL_PATH=/etc/ssl
+  fi
+fi
+
+openssl s_client -connect $1:${PORT-587} -${3:-tls1} -CApath $SSL_PATH/certs/ \
+                 -starttls smtp -servername ${2:-$1} ${EHLO:+-name $EHLO} \
+                 -verify 20 < /dev/null |
   sed "/^-----BEGIN CERTIFICATE-----/,/^-----END CERTIFICATE-----/d" |
   ${PAGER:-less}

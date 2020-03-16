@@ -1,21 +1,37 @@
 #! /bin/sh
 # s_dump_imaps (Bourne shell script) -- Connects to an SSL IMAP server and shows info about the X.509 certificate
+#
+# Version: 1.1
+# Copyright: (c) 2019 Alastair Irvine <alastair@plug.org.au>
+# Keywords: openssl, SSL, TLS, secure certificate
+# Licence: This file is released under the GNU General Public License v2
+#
+# Uses "Server Name Indication" (SNI)
 
 # Similar to "-nameopt RFC2253" but with semicolons and without dn_rev
 OPTS="-nameopt esc_2253,esc_ctrl,esc_msb,utf8,dump_nostr,dump_unknown,dump_der,sep_semi_plus_space,sname"
 SELF=$(basename "$0")
 
-if [ $# -ne 1 ] ; then
-  echo "Usage: s_dump_imaps <servername>" >&2
+if [ "$1" = -P ] ; then
+  PORT=$2
+  shift
+  shift
+fi
+
+if [ $# -lt 1 -o $# -gt 3 ] ; then
+  echo "Usage: $SELF [ -P <port> ] <servername> [ <sitename> ] [ <opts> ]" >&2
   exit 1
 fi
 
 if [ -z "$SSL_PATH" ] ; then
-  echo $SELF: 'ERROR: $SSL_PATH not set' >&2
-  exit 2
+  if [ -d /etc/pki/tls ] ; then
+    SSL_PATH=/etc/pki/tls
+  else
+    SSL_PATH=/etc/ssl
+  fi
 fi
 
-openssl s_client -connect $1:993 -tls1 -CApath $SSL_PATH/certs/ < /dev/null |
+openssl s_client -connect $1:${PORT-993} -servername ${2:-$1} -${3:-tls1} -CApath $SSL_PATH/certs/ < /dev/null |
   openssl x509 -text $OPTS -noout |
   ${PAGER:-less}
 

@@ -1,5 +1,5 @@
 #! /bin/sh
-# s_verify_imaps (Bourne shell script) -- Connects to an SSL IMAP server and verifies the X.509 certificate
+# s_verify_ldaps (Bourne shell script) -- Connects to an SSL LDAP server and verifies the X.509 certificate
 #
 # Version: 1.1
 # Copyright: (c) 2019 Alastair Irvine <alastair@plug.org.au>
@@ -7,6 +7,8 @@
 # Licence: This file is released under the GNU General Public License v2
 #
 # Uses "Server Name Indication" (SNI)
+# Note: Verifies the chain but won't actually compare the CN of the returned
+# cert agains the server name
 
 SELF=$(basename "$0")
 
@@ -29,6 +31,6 @@ if [ -z "$SSL_PATH" ] ; then
   fi
 fi
 
-openssl s_client -connect $1:${PORT-993} -servername ${2:-$1} -${3:-tls1} -verify 20 -CApath $SSL_PATH/certs/ < /dev/null |
+openssl s_client -connect $1:${PORT-636} -servername ${2:-$1} -${3:-tls1} -verify 20 -CApath $SSL_PATH/certs/ < /dev/null |
   sed "/^-----BEGIN CERTIFICATE-----/,/^-----END CERTIFICATE-----/d" |
   ${PAGER:-less}
