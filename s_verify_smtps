@@ -1,7 +1,7 @@
 #! /bin/sh
 # s_verify_smtps (Bourne shell script) -- Connects to an SSL SMTP server and verifies the X.509 certificate for a given domain
 #
-# Version: 1.1
+# Version: 1.2
 # Copyright: (c) 2019 Alastair Irvine <alastair@plug.org.au>
 # Keywords: openssl, SSL, TLS, secure certificate
 # Licence: This file is released under the GNU General Public License v2
@@ -50,7 +50,7 @@ if [ -z "$SSL_PATH" ] ; then
 fi
 
 # Note that 465 is not a standard port
-openssl s_client -connect $1:${PORT-465} -${3:-tls1} -CApath $SSL_PATH/certs/ \
+openssl s_client -connect $1:${PORT-465} ${3:--no_ssl3} -CApath $SSL_PATH/certs/ \
                  -servername ${2:-$1} ${EHLO:+-name $EHLO} \
                  -verify 20 < /dev/null |
   sed "/^-----BEGIN CERTIFICATE-----/,/^-----END CERTIFICATE-----/d" |

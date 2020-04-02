@@ -1,7 +1,7 @@
 #! /bin/sh
 # s_verify_pop3s (Bourne shell script) -- Connects to an SSL POP3 server and verifies the X.509 certificate
 #
-# Version: 1.1
+# Version: 1.2
 # Copyright: (c) 2019 Alastair Irvine <alastair@plug.org.au>
 # Keywords: openssl, SSL, TLS, secure certificate
 # Licence: This file is released under the GNU General Public License v2
@@ -15,7 +15,7 @@ if [ "$1" = -P ] ; then
 fi
 
 if [ $# -lt 1 -o $# -gt 3 ] ; then
-  echo "Usage: $SELF [ -P <port> ] <servername> [ <opts> ]" >&2
+  echo "Usage: $SELF [ -P <port> ] <servername> [ <sitename> ] [ <opts> ]" >&2
   exit 1
 fi
 
@@ -27,6 +27,6 @@ if [ -z "$SSL_PATH" ] ; then
   fi
 fi
 
-openssl s_client -connect $1:${PORT-995} -${2:-tls1} -verify 20 -CApath $SSL_PATH/certs/ < /dev/null |
+openssl s_client -connect $1:${PORT-995} -servername ${2:-$1} ${3:--no_ssl3} -verify 20 -CApath $SSL_PATH/certs/ < /dev/null |
   sed "/^-----BEGIN CERTIFICATE-----/,/^-----END CERTIFICATE-----/d" |
   ${PAGER:-less}

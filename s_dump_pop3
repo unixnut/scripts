@@ -1,7 +1,7 @@
 #! /bin/sh
 # s_dump_pop3 (Bourne shell script) -- Connects to a POP3 server, invokes STARTTLS and shows info about the X.509 certificate
 #
-# Version: 1.1
+# Version: 1.2
 # Copyright: (c) 2019 Alastair Irvine <alastair@plug.org.au>
 # Keywords: openssl, SSL, TLS, secure certificate
 # Licence: This file is released under the GNU General Public License v2
@@ -31,6 +31,6 @@ if [ -z "$SSL_PATH" ] ; then
   fi
 fi
 
-openssl s_client -connect $1:${PORT-110} -starttls pop3 -servername ${2:-$1} -${3:-tls1} -CApath $SSL_PATH/certs/ < /dev/null |
+openssl s_client -connect $1:${PORT-110} -starttls pop3 -servername ${2:-$1} ${3:--no_ssl3} -CApath $SSL_PATH/certs/ < /dev/null |
   openssl x509 -text $OPTS -noout |
   ${PAGER:-less}
