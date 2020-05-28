@@ -11,7 +11,7 @@
 #   -o      (Git only) Specify remote to create/use
 #   -b      (Git only) Specify remote branch to push to
 #
-# Version: 1.4.6
+# Version: 1.4.7
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: git svn hg source-control wrapper
 # Requires: bash v4.0+
@@ -37,6 +37,7 @@
 #   + hg commit functions
 #   + need a means to override 'remote.<name>.push' branch
 #   + convert Mercurial hg@host:[path] repo locations to ssh://[user@]host[:port]/[path] format
+#   + select branch/remote for 'here', 'transfer', etc.
 
 self=$(basename "$0")
 allowed_options=dsqCfrMGo:b:m:
@@ -241,10 +242,11 @@ git_print_tags()
 # Internal use only
 git_do_commit()
 {
-  local extra_args=()
+  # Temporary equivalent of `git config --global commit.verbose = true`
+  local extra_args=(--verbose)
 
   if [ -n "$message" ] ; then
-    extra_args=(-m "$message")
+    extra_args+=(-m "$message")
   fi
 
   if [ $git_use_staged = y ] ; then
@@ -456,7 +458,7 @@ maybe_store_option()
 {
   if [ "$no_more_options" != y ] ; then
     if [[ "$1" != -- && "$1" == -?* ]] ; then
-      args[${#args[@]}]=$1
+      args+=($1)
       continue
     else
       no_more_options=y

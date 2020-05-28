@@ -1,0 +1,4 @@
+#! /bin/sh
+#  (Bourne shell script) -- Enable core files for a given process, etc.
+
+prlimit --pid=$1 --core=300000000

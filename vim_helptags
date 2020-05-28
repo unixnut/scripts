@@ -1,0 +1,14 @@
+#! /bin/sh
+# vim_helptags (Bourne shell script) -- Generate the Vim help tags file(s) for a given directory
+#
+# Automatically uses the doc subdirectory if any
+
+if [ $# -ne 1 ] || [ "x$1" = -h ] || [ "x$1" = --help ] ; then
+  echo "Usage: ${0##*/} <dir>"
+fi
+
+if [ -d "$1/doc" ] ; then
+  vim -u NONE -c "helptags $1/doc" -c q
+else
+  vim -u NONE -c "helptags $1" -c q
+fi
