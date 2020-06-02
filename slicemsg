@@ -1,0 +1,12 @@
+#! /bin/sh
+# slicemsg (Bourne shell script) -- Copies RFC822 message to clipboard (header) and selection (body)
+
+file=/tmp/$$.msg
+
+cat > $file
+
+# header
+formail -X "" -I X-Spam-Level -I X-Spam-Checker-Version -I X-SA-Exim-Mail-From -I X-SA-Exim-Connect-IP -I X-SA-Exim-Version -I X-SA-Exim-Scanned -I X-Spam-Status < $file |
+  xclip -selection clipboard
+formail -I "" < $file |
+  xclip
