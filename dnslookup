@@ -1,0 +1,4 @@
+#! /bin/sh
+# dnslookup (Bourne shell script) -- like `dig +short` but shows the full record returned
+
+dig +noqr +nocmd +noadditional +noauthority +nocomments +noquestion +nostats "$@"
