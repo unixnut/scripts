@@ -1,0 +1,17 @@
+#! /bin/sh
+# ssh-usekey (Bourne shell script) -- Run a command with temporary access to an SSH key
+#
+# Runs a temporary ssh-agent process, loads a key into it (prompting for the
+# passphrase) and runs a command in that context.
+#
+# Usage: ssh-usekey [ -n ] <key> <cmd> ...
+
+set -e
+
+eval $(/usr/bin/ssh-agent -s > /dev/null)
+trap "kill $SSH_AGENT_PID" INT QUIT EXIT
+
+/usr/bin/ssh-add "$1"
+shift
+
+"$@"
