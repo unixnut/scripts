@@ -8,7 +8,7 @@
 
 set -e
 
-eval $(/usr/bin/ssh-agent -s > /dev/null)
+eval $(/usr/bin/ssh-agent -s) > /dev/null
 trap "kill $SSH_AGENT_PID" INT QUIT EXIT
 
 /usr/bin/ssh-add "$1"
