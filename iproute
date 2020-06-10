@@ -1,0 +1,47 @@
+#! /bin/sh
+#  (Bourne shell script) -- 
+
+WHITE=$(setterm -bold on)
+NORMAL=$(setterm -default)
+_PAGER="less -R -S"
+
+
+iproute_filter()
+{
+  sed -e '/ \(\x1b[^a-z]*.\)\?via/ !s/ \(\x1b[^a-z]*.\)\?dev /\t&/' \
+      -e '/ \(\x1b[^a-z]*.\)\?proto/ !s/ \(\x1b[^a-z]*.\)\?scope /\t&/' \
+      -e 's/ \(\x1b[^a-z]*.\)\?\(dev\|via\) /\t/g' \
+      -e '/ \(\x1b[^a-z]*.\)\?metric/ !s/ \(\x1b[^a-z]*.\)\?linkdown /\t&/' \
+      -e 's/[[:space:]]\(\x1b[^a-z]*.\)\?\(proto\|scope\|link\|src\|metric\)\>//g'
+}
+
+
+# Columns, colours, pager, headings
+show_table()
+{
+  name=$1
+  id=
+  echo "$name:" ##  $id
+  echo ${WHITE}Dest Via Dev Proto Src Metric Flags${NORMAL}
+  ip $IP_FORCE_COLOUR_OPT route show table $1 |
+    sed -e '/ \(\x1b[^a-z]*.\)\?src/ !s/ \(\x1b[^a-z]*.\)\?metric /\t&/' |
+    iproute_filter
+}
+
+
+# *** MAINLINE ***
+{
+  show_table main
+  for table in $(awk '/^\s*[0-9]/ && $1 != 0 && $1 != 253 && $1 != 254 && $1 != 255 {print $2}' /etc/iproute2/rt_tables $(ls /etc/iproute2/rt_tables.d/*.conf | grep -v '\*\.conf$')) ; do
+    echo
+    show_table $table
+  done
+  echo
+
+  # IPv6
+  echo ${WHITE}Dest Via Dev Proto Metric Flags${NORMAL}
+  ip -6 $IP_FORCE_COLOUR_OPT route |
+    iproute_filter
+} |
+  column -tn -e |
+  $_PAGER
