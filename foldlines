@@ -1,28 +1,37 @@
 #! /bin/csh -f
 # foldlines (C shell script) -- folds several lines into a comma-separated list
-# (any whitespace preceeding the lines is stripped)
-# (the first line is blanked if it starts with a hash and a space)
+#
+# Any whitespace preceeding the lines is stripped.  The first line is blanked
+# if it starts with a hash and a space.
+#
+# Usage:
+#   foldlines [ -s ] [ -S <sep> ]
+#
+# Where
+#   -s  Follow each comma with a space
+#   -S  Use a custom separator
+#
 # TO-DO: options to add leaders/trailers
 
 set self = `basename $0`
-set allowed_options = sS:l:t:
+set allowed_options = sS:
 
 # shouldn't strip bullet points unless told
 ## set sed_join_lines = 's/\n[-#+] /,/'
-set sep = ""
+set sep = ","
 
 # process options
-set argv = (`getopt -n $self -s csh +$allowed_options $*:q`)
+eval set argv = \(`getopt -n $self -s csh --options=+$allowed_options -- $*:q`\)
 if ($status != 0) exit 1        # getopt would have already reported the error
 
 while (x$1:q != x--)
   switch ($1)
     case -s:
-      set sep = " "
+      set sep = ", "
       breaksw
 
     case -S:
-      eval "set sep = $2"  # argument was quoted by getopt
+      set sep = "$2:q"
       shift         # get rid of the option
       breaksw
 
@@ -31,6 +40,7 @@ while (x$1:q != x--)
 end
 shift       # get rid of the "--"
 
-set sed_join_lines = "s/\n[ 	]*/,$sep/"
+set sed_join_lines = "s/\n[ 	]*/$sep/"
+## echo "[$sep] $sed_join_lines"
 
 sed -e 's/^# //' -e ': start' -e N -e "$sed_join_lines" -e 't start'

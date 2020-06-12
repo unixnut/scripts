@@ -11,7 +11,7 @@ allowed_options=n:
 # == command-line parsing ==
 # -- option handling --
 set -e
-eval set -- `getopt --shell=sh -n $self +$allowed_options "$@"`
+eval set -- `getopt --shell=sh -n $self --options=+$allowed_options "$@"`
 set +e        # getopt would have already reported the error
 
 while [ x"$1" != x-- ] ; do

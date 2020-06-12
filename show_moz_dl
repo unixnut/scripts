@@ -11,7 +11,7 @@ set self = `basename $0`
 set allowed_options = ti
 
 # process options
-eval set argv = \(`getopt -n $self -s csh +$allowed_options $*:q`\)
+eval set argv = \(`getopt -n $self -s csh --options=+$allowed_options $*:q`\)
 if ($status != 0) exit 1        # getopt would have already reported the error
 
 set xsltproc_opts
