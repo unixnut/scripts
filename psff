@@ -1,0 +1,7 @@
+#! /bin/sh
+# psff (Bourne shell script) -- similar to `ps f -eFww` but with virtual memory size and wide columns
+#
+# Doesn't use $PAGER because more(1) doesn't support the -S option and it's
+# needed to stop less(1) wrapping lines
+
+ps f -eww -o user:12,pid,ppid,c,vsz:9,sz:8,rss:7,psr,stime,tty,stat,time,cmd | less -S
