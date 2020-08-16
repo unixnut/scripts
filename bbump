@@ -1,0 +1,142 @@
+#! /bin/sh
+# bbump (Bourne shell script) -- Incremental tarball metadata management
+#
+# Creates a set of metadata files that allow the creation of multi-level
+# incremental tarballs.  (As supported by GNU tar.)  Each invocation creates a
+# copy of the previous metadata file at the requested level*, which will then be
+# modified.  It also creates a symlink called backup.meta pointing to the newly
+# created metadata file.
+# * Because toplevel backups are considered full, the file isn't copied but the
+#   symlink is updated and left dangling, so tar will create the metadata file
+#   from scratch, i.e. not relative to a previous metadata file.
+#
+# GNU tar rewrites the metadata file during each invocation, so run this script
+# before `tar -g .../backup.meta ...`.
+#
+# Usage: bbump [ -u | -i | <level> ]
+# Where:
+#   <level>     (Not currently supported.)
+#   -u          Means go up a level (and do a full backup) instead of
+#               continuing a branch.
+#   -i          Add an incremental branch off the latest full backup
+#
+# In the example, each amount of indent (starting at 1) corresponds to a level.
+# The first level is considered the highest.
+# Each incremental (i.e. not full) tarball is relative to either the previous
+# contiguous one at the same level, or in the case a backup ending with .1, the
+# one at the higher level:
+#
+#   backup.1.meta
+#   backup.2.meta
+#     backup.2.1.meta
+#     backup.2.2.meta
+#     backup.2.3.meta
+#       backup.2.3.1.meta
+#       backup.2.3.2.meta
+#     backup.2.4.meta
+#     backup.2.5.meta
+#   backup.3.meta
+#
+# The default is to continue at the same level.
+#
+# It doesn't make sense to "go back in time" and create a continuation
+# of a previous "branch" (at either the same level or a sub-branch) when
+# there is a more recent higher-level branch in existence.  
+# It is not currently possible to create sub-branches, so only two
+# levels are currently supported; full backups at the highest level and
+# incrementals.  As a consequence of this, differential backups are not
+# currently supported.
+
+SELF=bbump
+DIR=${BBUMP_DIR:-/tmp/i}
+
+# *** FUNCTIONS ***
+# Usage: regular_bump <filename> [ y ]
+# Where the second parameter means branch off a new, lower level
+regular_bump()
+{
+  if [ ${2-n} = y ] ; then
+    # Append a .1 to the given increment, i.e. start a new, lower level
+    newfile="$t.1.meta"
+  else
+    # Increment count at current level
+    newfile="$p.$((increment + 1)).meta"
+  fi
+}
+
+
+higher_bump()
+{
+  if [ "$p" = $DIR/backup ] ; then
+    echo "$SELF: At top level, can't go up." >&2
+    exit 3
+  fi
+
+  upper_increment=${p##*.}  # Get lowest-level increment from parent
+  newfile="${p%.*}.$((upper_increment + 1)).meta"
+}
+
+
+# *** MAINLINE ***
+new_incr=n
+if [ "x$1" = x-i ] ; then
+  new_incr=y
+  shift
+fi
+if [ "x$1" = x-u ] ; then
+  go_up=y
+  shift
+else
+  go_up=n
+fi
+
+if [ $go_up = y ] && [ $new_incr = y ] ; then
+  echo "$SELF: Can't specify conflicting options" >&2
+  exit 4
+fi
+## LEVEL=${1-1}
+
+set $(ls $DIR/backup.$1*.meta | sort --version-sort | tail -n 2)
+last_file=$2
+penultimate_file=$1  # This should instead be previous-at-same-level for differential
+if [ $# -gt 1 ] &&
+   [ "$(md5sum $last_file | cut -d' ' -f1)" = "$(md5sum $penultimate_file | cut -d' ' -f1)" ]
+then
+  echo "$SELF: $DIR/backup.*.meta has already been copied; bailing out." >&2
+  exit 2
+fi
+
+t=${last_file%.meta}
+p=${t%.*}
+increment=${t##*.}
+# Set $newfile
+if [ $go_up = y ] ; then
+  higher_bump $last_file
+else
+  if [ "$p" = $DIR/backup ] ; then
+    # Bail out here if defaulting to a full backup is not desired
+    :
+  else
+    # Check this here so it doesn't cause problems down the track when going up
+    if [ $new_incr = y ] ; then
+      echo "$SELF: Differential backups are not currently supported." >&2
+      exit 5
+    fi
+  fi
+  regular_bump $last_file $new_incr
+fi
+
+
+echo $newfile
+newfile_t=${newfile%.*}
+if [ "${newfile_t%.*}" = $DIR/backup ] ; then
+  # Don't copy anything (just create the symlink) when making a top level
+  # increment because we want GNU tar to create the file from scratch
+  echo full
+else
+  # For an incremental backup, GNU tar reads the file and then rewrites an
+  # updated version
+  cp -pi $last_file $newfile
+fi
+
+ln -s --force $newfile $DIR/backup.meta

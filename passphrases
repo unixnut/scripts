@@ -1,0 +1,23 @@
+#! /bin/sh
+# passphrases (Bourne shell script) -- Print 20 x 4-word passphrases, with each word < 8 chars
+
+NUM=20
+WORDCOUNT=4
+if [ -f /usr/dict/words ] ; then
+  WORDLIST=/usr/dict/words
+else
+  WORDLIST=/etc/dictionaries-common/words
+fi
+
+grep -v -e '[A-Z]' -e "'" -e ........ $WORDLIST |
+  shuf -n $((NUM * WORDCOUNT)) |
+  for i in $(seq 1 $NUM)
+  do
+    read first
+    read second
+    read third
+    read fourth
+    echo $first $second $third $fourth
+
+    ## echo $(for j in $(seq 1 $WORDCOUNT) ; do read w ; printf "%s " $w ; done)
+  done | ${PAGER:-less}
