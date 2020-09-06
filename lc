@@ -1,0 +1,5 @@
+#!/usr/bin/awk -f
+# lc (AWK script) -- Running count of lines in the input
+
+{ printf "\r%lu", NR }
+END { print "" }
