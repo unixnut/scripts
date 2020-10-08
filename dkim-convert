@@ -1,15 +1,15 @@
 #! /bin/sed -nf
 # dkim-convert (Sed script with auto-print turned off) -- Convert a opendkim-genkey zone file fragment to TXT Record contents
 
-# Strip off everything other than the string contents
-s/[^"]*"\([^"]*\)".*/\1/
+# Strip off everything other than the quoted string
+s/[^"]*\("[^"]*"\).*/\1/
 # Add a newline and the current line to the hold space
 H
 $ {
     # On the last line, grab the hold space contents and remove the newlines
     g
-    s/\n//g
-    # Print it surrounded by quotes
-    s/.*/"&"/p
+    s/\n/ /g
+    # Print it
+    s/^ //p
   }
 
