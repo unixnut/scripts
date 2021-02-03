@@ -1,0 +1,18 @@
+#! /bin/sh
+# minicombine (Bourne shell script) -- Merge two files and provide git(1) style output
+#
+# Based a Super User answer https://superuser.com/a/1541906/197866
+# by https://superuser.com/users/337631/davidpostill
+
+
+SELF=minicombine
+
+TOKEN="<======= $(date -u '+%Y-%m-%d_%H:%M:%S.%6N')_$$ ========>"
+
+if [ $# -lt 2 ] ; then
+  ## echo "$SELF: Error: " >&2
+  echo "Usage: $SELF <file1> <file2>" >&2
+  exit 1
+fi
+
+diff -D"$TOKEN" "$@" | grep -v "$TOKEN"

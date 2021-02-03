@@ -1,0 +1,64 @@
+#! /bin/sh
+# minimerge (Bourne shell script) -- Merge two files and provide git(1) style output
+#
+# Note that unlike a 3-way merge, it's impossible to tell whether a line was
+# deleted from the first file or added to the second file, or vice versa.
+#
+# Group format for line deleted from first file or added to second file:
+#     <<<<<<<
+#     =======
+#     hello
+#     >>>>>>> SECOND
+#
+# Group format for line added to first file or deleted from second file:
+#     <<<<<<< FIRST
+#     bar
+#     =======
+#     >>>>>>>
+#
+# Group format for changed line:
+#     qux
+#     <<<<<<< FIRST
+#     baz
+#     =======
+#     ba
+#     >>>>>>> SECOND
+#
+# TO-DO: option for mentioning a file even though it has no content in that group
+
+SELF=minimerge
+
+
+# *** FUNCTIONS ***
+canonicalise()
+{
+  :
+}
+
+
+# *** MAINLINE ***
+if [ $# -lt 2 ] ; then
+  ## echo "$SELF: Error: " >&2
+  echo "Usage: $SELF <file1> <file2>" >&2
+  exit 1
+fi
+
+## canonicalise ""
+FIRST=$1
+SECOND=$2
+
+# Note that %< and %> both end with a newline
+diff --old-group-format="<<<<<<< $FIRST
+%<=======
+>>>>>>>$SECOND_DELETED
+" \
+     --new-group-format="<<<<<<<$FIRST_DELETED
+=======
+%>>>>>>>> $SECOND
+" \
+     --changed-group-format="<<<<<<< $FIRST
+%<=======
+%>>>>>>>> $SECOND
+" \
+     "$@"
+     ## --unchanged-group-format="%L" \

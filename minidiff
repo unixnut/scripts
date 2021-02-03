@@ -1,0 +1,10 @@
+#! /bin/sh
+# minidiff (Bourne shell script) -- 
+
+if [ $# -lt 2 ] ; then
+  ## echo "$SELF: Error: " >&2
+  echo "Usage: $SELF <file1> <file2>" >&2
+  exit 1
+fi
+
+diff --unchanged-line-format='  %L' --old-line-format='< %L' --new-line-format='> %L' "$@"
