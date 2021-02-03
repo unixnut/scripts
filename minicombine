@@ -7,12 +7,11 @@
 
 SELF=minicombine
 
-TOKEN="<======= $(date -u '+%Y-%m-%d_%H:%M:%S.%6N')_$$ ========>"
-
 if [ $# -lt 2 ] ; then
   ## echo "$SELF: Error: " >&2
   echo "Usage: $SELF <file1> <file2>" >&2
   exit 1
 fi
 
-diff -D"$TOKEN" "$@" | grep -v "$TOKEN"
+diff --old-line-format='%L' --new-line-format='%L' "$@"
+     ## --unchanged-group-format="%L" \
