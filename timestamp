@@ -1,7 +1,10 @@
 #! /bin/csh -f
 # timestamp (C shell script) -- prints the date and time, separated by a space
+#
 # Usage: timestamp [ -u ]
 # Where -u causes UTC to be used instead ("Z" is printed after the time)
+#
+# TO-DO: Allow nanoseconds/microseconds/milliseconds/seconds precision
 
 if ("x$1" == x-u) then
   shift
