@@ -1,0 +1,9 @@
+#! /bin/sh
+# readdoc (Bourne shell script) -- Read a .doc or .docx file in a text pager
+
+docx2txt "$1" - |
+  sed -e 'a\
+' -e '/./ s/^/  /' |
+  fold -sw ${TEXT_WIDTH-65} |
+  sed  -e '/./ s/^/    /' |
+  ${PAGER-less}
