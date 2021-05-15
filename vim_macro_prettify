@@ -1,0 +1,239 @@
+#! /bin/sed -f
+# vim_macro_prettify (Sed script) -- Convert binary sequences in Vim macros to parseable text
+#
+# WARNING: This script will only work on latin1 input streams.  In Vim, before
+# saving the file with the macro text in it, run `set fileencoding=latin1` .
+# Alternatively, use a shell pipeline to change the encoding; e.g. run
+# `:.!iconv -t latin1 - | vim_macro_prettify` in Vim to prettify one line of
+# the current buffer.
+#
+# In Vim, move to a <80> character in the macro string and press g8 in normal
+# mode to see how many bytes it takes up; if it's 2, you'll need to compensate
+# using the method given above.
+#
+# Thanks to [VimGolf.com](http://www.vimgolf.com) by Ilya Grigorik.
+# See https://github.com/igrigorik/vimgolf/blob/master/lib/vimgolf/lib/vimgolf/keylog.rb
+
+s/\x01/\\<C-a>/g
+s/\x02/\\<C-b>/g
+s/\x03/\\<C-c>/g
+s/\x04/\\<C-d>/g
+s/\x05/\\<C-e>/g
+s/\x06/\\<C-f>/g
+s/\x07/\\<C-g>/g
+s/\x08/\\<C-h>/g
+s/\t/\\<Tab>/g
+# <LF> i.e. C-J is recorded as a NUL character (<C-space> is recorded specially)
+s/\x00/\\<LF>/g
+s/\x0b/\\<C-k>/g
+s/\x0c/\\<C-l>/g
+s/\r/\\<CR>/g
+## s/\x0d/\\<C-m>/g  # See above
+s/\x0e/\\<C-n>/g
+s/\x0f/\\<C-o>/g
+s/\x10/\\<C-p>/g
+s/\x11/\\<C-q>/g
+s/\x12/\\<C-r>/g
+s/\x13/\\<C-s>/g
+s/\x14/\\<C-t>/g
+s/\x15/\\<C-u>/g
+s/\x16/\\<C-v>/g
+s/\x17/\\<C-w>/g
+s/\x18/\\<C-x>/g
+s/\x19/\\<C-y>/g
+s/\x1a/\\<C-z>/g
+s/\x1b/\\<Esc>/g
+s/\x1c/\\<C-\\>/g
+s/\x1d/\\<C-]>/g
+s/\x1e/\\<C-^>/g
+s/\x1f/\\<C-_>/g
+
+s/\x80k1/\\<F1>/g
+s/\x80k2/\\<F2>/g
+s/\x80k3/\\<F3>/g
+s/\x80k4/\\<F4>/g
+s/\x80k5/\\<F5>/g
+s/\x80k6/\\<F6>/g
+s/\x80k7/\\<F7>/g
+s/\x80k8/\\<F8>/g
+s/\x80k9/\\<F9>/g
+s/\x80k;/\\<F10>/g
+s/\x80F1/\\<F11>/g
+s/\x80F2/\\<F12>/g
+s/\x80F3/\\<F13>/g
+s/\x80F4/\\<F14>/g
+s/\x80F5/\\<F15>/g
+s/\x80F6/\\<F16>/g
+s/\x80F7/\\<F17>/g
+s/\x80F8/\\<F18>/g
+s/\x80F9/\\<F19>/g
+
+s/\x80%1/\\<Help>/g
+s/\x80&8/\\<Undo>/g
+s/\x80#2/\\<S-Home>/g
+s/\x80\*7/\\<S-End>/g
+s/\x80K1/\\<kHome>/g
+s/\x80K4/\\<kEnd>/g
+s/\x80K3/\\<kPageUp>/g
+s/\x80K5/\\<kPageDown>/g
+s/\x80K6/\\<kPlus>/g
+s/\x80K7/\\<kMinus>/g
+s/\x80K8/\\<kDivide>/g
+s/\x80K9/\\<kMultiply>/g
+s/\x80KA/\\<kEnter>/g
+s/\x80KB/\\<kPoint>/g
+s/\x80KC/\\<k0>/g
+s/\x80KD/\\<k1>/g
+s/\x80KE/\\<k2>/g
+s/\x80KF/\\<k3>/g
+s/\x80KG/\\<k4>/g
+s/\x80KH/\\<k5>/g
+s/\x80KI/\\<k6>/g
+s/\x80KJ/\\<k7>/g
+s/\x80KK/\\<k8>/g
+s/\x80KL/\\<k9>/g
+
+s/\x80kP/\\<PageUp>/g
+s/\x80kN/\\<PageDown>/g
+s/\x80kh/\\<Home>/g
+s/\x80@7/\\<End>/g
+s/\x80kI/\\<Insert>/g
+s/\x80kD/\\<Del>/g
+s/\x80kb/\\<BS>/g
+
+s/\x80ku/\\<Up>/g
+s/\x80kd/\\<Down>/g
+s/\x80kl/\\<Left>/g
+s/\x80kr/\\<Right>/g
+s/\x80#4/\\<S-Left>/g
+s/\x80%i/\\<S-Right>/g
+
+s/\x80kB/\\<S-Tab>/g
+# <C-space>
+s/\x80\xffX/\\<C-@>/g
+
+# This is how you escape literal 0x80
+s/\x80\xfeX/\\<0x80>/g
+
+# These rarely-used modifiers should be combined with the next
+# stroke (like <S-Space>), but let's put them here for now
+s/\x80\xfc\x02/\\<S->/g
+s/\x80\xfc\x04/\\<C->/g
+s/\x80\xfc\x06/\\<C-S->/g
+s/\x80\xfc\x08/\\<A->/g
+s/\x80\xfc\x0a/\\<A-S->/g
+s/\x80\xfc\x0c/\\<C-A>/g
+s/\x80\xfc\x0e/\\<C-A-S->/g
+s/\x80\xfc\x10/\\<M->/g
+s/\x80\xfc\x12/\\<M-S->/g
+s/\x80\xfc\x14/\\<M-C->/g
+s/\x80\xfc\x16/\\<M-C-S->/g
+s/\x80\xfc\x18/\\<M-A->/g
+s/\x80\xfc\x1a/\\<M-A-S->/g
+s/\x80\xfc\x1c/\\<M-C-A>/g
+s/\x80\xfc\x1e/\\<M-C-A-S->/g
+
+# KS_EXTRA keycodes (starting with 0x80 0xfd) are defined by an enum in
+# Vim's keymap.h. Sometimes, a new Vim adds or removes a keycode, which
+# changes the binary representation of every keycode after it. Very
+# annoying.
+s/\x80\xfd\x4/\\<S-Up>/g
+s/\x80\xfd\x5/\\<S-Down>/g
+s/\x80\xfd\x6/\\<S-F1>/g
+s/\x80\xfd\x7/\\<S-F2>/g
+s/\x80\xfd\x8/\\<S-F3>/g
+s/\x80\xfd\x9/\\<S-F4>/g
+s/\x80\xfd\xa/\\<S-F5>/g
+s/\x80\xfd\xb/\\<S-F6>/g
+s/\x80\xfd\xc/\\<S-F7>/g
+s/\x80\xfd\xd/\\<S-F9>/g
+s/\x80\xfd\xe/\\<S-F10>/g
+s/\x80\xfd\xf/\\<S-F10>/g
+s/\x80\xfd\x10/\\<S-F11>/g
+s/\x80\xfd\x11/\\<S-F12>/g
+s/\x80\xfd\x12/\\<S-F13>/g
+s/\x80\xfd\x13/\\<S-F14>/g
+s/\x80\xfd\x14/\\<S-F15>/g
+s/\x80\xfd\x15/\\<S-F16>/g
+s/\x80\xfd\x16/\\<S-F17>/g
+s/\x80\xfd\x17/\\<S-F18>/g
+s/\x80\xfd\x18/\\<S-F19>/g
+s/\x80\xfd\x19/\\<S-F20>/g
+s/\x80\xfd\x1a/\\<S-F21>/g
+s/\x80\xfd\x1b/\\<S-F22>/g
+s/\x80\xfd\x1c/\\<S-F23>/g
+s/\x80\xfd\x1d/\\<S-F24>/g
+s/\x80\xfd\x1e/\\<S-F25>/g
+s/\x80\xfd\x1f/\\<S-F26>/g
+s/\x80\xfd /\\<S-F27>/g
+s/\x80\xfd!/\\<S-F28>/g
+s/\x80\xfd"/\\<S-F29>/g
+s/\x80\xfd#/\\<S-F30>/g
+s/\x80\xfd\$/\\<S-F31>/g
+s/\x80\xfd%/\\<S-F32>/g
+s/\x80\xfd&/\\<S-F33>/g
+s/\x80\xfd'/\\<S-F34>/g
+s/\x80\xfd(/\\<S-F35>/g
+s/\x80\xfd)/\\<S-F36>/g
+s/\x80\xfd\*/\\<S-F37>/g
+s/\x80\xfd+/\\<Mouse>/g
+s/\x80\xfd,/\\<LeftMouse>/g
+s/\x80\xfd-/\\<LeftDrag>/g
+s/\x80\xfd\./\\<LeftRelease>/g
+s/\x80\xfd\//\\<MiddleMouse>/g
+s/\x80\xfd0/\\<MiddleDrag>/g
+s/\x80\xfd1/\\<MiddleRelease>/g
+s/\x80\xfd2/\\<RightMouse>/g
+s/\x80\xfd3/\\<RightDrag>/g
+s/\x80\xfd4/\\<RightRelease>/g
+s/\x80\xfd5//g
+s/\x80\xfd8/\\KE_SNIFF/g
+s/\x80\xfd9/\\KE_XF1/g
+s/\x80\xfd:/\\KE_XF2/g
+s/\x80\xfd;/\\KE_XF3/g
+s/\x80\xfd</\\KE_XF4/g
+s/\x80\xfd=/\\KE_XEND/g
+s/\x80\xfd>/\\KE_ZEND/g
+s/\x80\xfd?/\\KE_XHOME/g
+s/\x80\xfd@/\\KE_ZHOME/g
+s/\x80\xfdA/\\KE_XUP/g
+s/\x80\xfdB/\\KE_XDOWN/g
+s/\x80\xfdC/\\KE_XLEFT/g
+s/\x80\xfdD/\\KE_XRIGHT/g
+s/\x80\xfdE/\\KE_LEFTMOUSE_NM/g
+s/\x80\xfdF/\\KE_LEFTRELEASE_NM/g
+s/\x80\xfdG/\\KE_S_XF1/g
+s/\x80\xfdH/\\KE_S_XF2/g
+s/\x80\xfdI/\\KE_S_XF3/g
+s/\x80\xfdJ/\\KE_S_XF4/g
+s/\x80\xfdK/\\<ScrollWheelUp>/g
+s/\x80\xfdL/\\<ScrollWheelDown>/g
+s/\x80\xfdM/\\<ScrollWheelRight>/g
+s/\x80\xfdN/\\<ScrollWheelLeft>/g
+s/\x80\xfdO/\\<kInsert>/g
+s/\x80\xfdP/\\<kDel>/g
+s/\x80\xfdQ/\\<0x9b>/g
+s/\x80\xfdR/\\KE_SNR/g
+s/\x80\xfdS/\\KE_PLUG/g
+s/\x80\xfdT/\\KE_CMDWIN/g
+s/\x80\xfdU/\\<C-Left>/g
+s/\x80\xfdV/\\<C-Right>/g
+s/\x80\xfdW/\\<C-Home>/g
+s/\x80\xfdX/\\<C-End>/g
+s/\x80\xfdY/\\KE_X1MOUSE/g
+s/\x80\xfdZ/\\KE_X1DRAG/g
+s/\x80\xfd\[/\\KE_X1RELEASE/g
+s/\x80\xfd\\/\\KE_X2MOUSE/g
+s/\x80\xfd\]/\\KE_X2DRAG/g
+s/\x80\xfd\^/\\KE_X2RELEASE/g
+s/\x80\xfd_/\\KE_DROP/g
+
+s/\x80\xfd\x60/\\KE_CURSORHOLD/g
+
+# If you use gvim, you'll get an entry in your keylog every time the
+# window gains or loses focus. These "keystrokes" should not show and
+# should not be counted.
+s/\x80\xfd\x60//g
+s/\x80\xfd\x61//g
+s/\x80\xfd\x62//g
+s/\x80\xfd\x63//g
