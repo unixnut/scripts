@@ -1,0 +1,38 @@
+#! /bin/sh
+# dmarcview (Bourne shell script) -- Reads a compressed 
+#
+# TO-DO: Safely delete $DIR on exit
+
+if [ -x /bin/mktemp ] ; then
+  DIR=$(mktemp -d --tmpdir)
+else
+  DIR=/tmp/dmarc/$$
+  mkdir -p $DIR
+fi
+FILE=$DIR/$$.tmp
+cat > $FILE
+
+## set -x
+
+typedata=$(file $FILE)
+case $typedata in
+  *gzip\ compressed\ data*)
+    zcat $FILE > $DIR/$$.xml
+    ;;
+
+  *Zip\ archive\ data*)
+    mv $FILE $DIR/$$.zip
+    unzip -d $DIR $DIR/$$.zip
+    ;;
+
+  *)
+    echo "File type unrecognised: '$typedata'" >&2
+    ## read p < /dev/tty
+    exit 2
+    ;;
+esac
+
+if [ -x /usr/bin/xml_pp ] ; then
+  xml_pp -i $DIR/*.xml
+fi
+view $DIR/*.xml
