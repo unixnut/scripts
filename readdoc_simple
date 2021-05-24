@@ -4,12 +4,10 @@
 # Uses a 4-space indent on each line plus a 2-space first-line indent per
 # paragraph.  Uses 65 for the text width; set $TEXT_WIDTH (an environment
 # variable) to alter.
-#
-# Requires'libtext-autoformat-perl' to be installed.
 
 docx2txt "$1" - |
   sed -e 'a\
-' -e '/./ s/^/$$/' |
-  justify -i 4 -w ${TEXT_WIDTH-65} |
-  sed  -e 's/^\([[:space:]]*\)\$\$/\1  /' |
+' -e '/./ s/^/  /' |
+  fold -sw ${TEXT_WIDTH-65} |
+  sed  -e '/./ s/^/    /' |
   ${PAGER-less}
