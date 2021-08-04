@@ -3,29 +3,45 @@
 #
 # Keywords: ssh AWS EC2 security
 
+
+# *** DEFINITIONS ***
+self=aws-host-fingerprints
+# E.g. "<14>Jul  6 07:30:24 " -- 2 match groups
+OPTIONAL_PREFIX='\(<[0-9]\+>\)\?\([[:alnum:]]\{3\} [ 0-9]\{2\} [0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\} \)\?'
+
+
+
+# *** FUNCTIONS ***
+cleanup()
+{
+  rm -f /tmp/aws-host-fingerprints_$$
+}
+
+
+# *** MAINLINE ***
 while [ "$(echo "x$1" | cut -c2)" = - ] ; do
   args="$args $1"
   shift
 done
-
-self=aws-host-fingerprints
 
 if [ -z "$1" ] ; then
   echo "Usage: $self <instance-id>" >&2
   exit 1
 fi
 
+trap 'cleanup' EXIT
+
 cont=y
 while [ $cont = y ]
 do
   # Redirect STDERR because 
   aws ec2 --output=text get-console-output $args --instance-id=$1 |
-    sed -n '/^ec2: -----BEGIN SSH HOST KEY FINGERPRINTS-----/,/^ec2: -----END SSH HOST KEY FINGERPRINTS-----/p' |
+    sed -n "/^${OPTIONAL_PREFIX}ec2: -----BEGIN SSH HOST KEY FINGERPRINTS-----/,/^${OPTIONAL_PREFIX}ec2: -----END SSH HOST KEY FINGERPRINTS-----/p" |
     tee /tmp/aws-host-fingerprints_$$ 2> /tmp/aws-host-fingerprints_errors_$$
 
   # Check if valid output was produced
-  if [ -s /tmp/aws-host-fingerprints_errors_$$ ] && \
-       grep -q -v -e "'Output'" -e '^$' /tmp/aws-host-fingerprints_errors_$$
+  if [ -s /tmp/aws-host-fingerprints_errors_$$ ] &&
+     grep -q -v -e "'Output'" -e '^$' /tmp/aws-host-fingerprints_errors_$$
   then
     # if not, loop again
     echo waiting...
