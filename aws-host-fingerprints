@@ -36,7 +36,7 @@ while [ $cont = y ]
 do
   # Redirect STDERR because 
   aws ec2 --output=text get-console-output $args --instance-id=$1 |
-    sed -n "/^${OPTIONAL_PREFIX}ec2: -----BEGIN SSH HOST KEY FINGERPRINTS-----/,/^${OPTIONAL_PREFIX}ec2: -----END SSH HOST KEY FINGERPRINTS-----/p" |
+    sed -n "/^${OPTIONAL_PREFIX}ec2: -----BEGIN SSH HOST KEY FINGERPRINTS-----/,/^${OPTIONAL_PREFIX}ec2: -----END SSH HOST KEY FINGERPRINTS-----/ s/^${OPTIONAL_PREFIX}//p" |
     tee /tmp/aws-host-fingerprints_$$ 2> /tmp/aws-host-fingerprints_errors_$$
 
   # Check if valid output was produced
