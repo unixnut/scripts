@@ -23,7 +23,7 @@ Scripts
 * **[archive](archive)**: 
 * **[argdemo](argdemo)**: 
 * **[argtest](argtest)**: 
-* **[aws-host-fingerprints](aws-host-fingerprints)**: 
+* **[aws-host-fingerprints](aws-host-fingerprints)**: Crawls the EC2 instance logs for a hosts's SSH key fingerprints
 * **[aws-iterate](aws-iterate)**: 
 * **[aws-upload-cert](aws-upload-cert)**: 
 * **[aws_create_vpn_sg](aws_create_vpn_sg)**: 
@@ -38,15 +38,9 @@ Scripts
 * **[c_sans](c_sans)**: 
 * **[c_sans.py](c_sans.py)**: 
 * **[c_verify](c_verify)**: 
-* **[callls](callls)**: 
-* **[calls](calls)**: 
-* **[cals](cals)**: 
-* **[cllls](cllls)**: 
-* **[clls](clls)**: 
 * **[clockoff](clockoff)**: 
 * **[clockon](clockon)**: 
 * **[clowncar](clowncar)**: 
-* **[cls](cls)**: 
 * **[codefold](codefold)**: 
 * **[colour_name](colour_name)**: 
 * **[colsum](colsum)**: 
@@ -54,13 +48,7 @@ Scripts
 * **[compare_times](compare_times)**: 
 * **[config_hierarchy.py](config_hierarchy.py)**: 
 * **[crate](crate)**: 
-* **[csallls](csallls)**: 
-* **[csalls](csalls)**: 
-* **[csals](csals)**: 
-* **[csllls](csllls)**: 
-* **[cslls](cslls)**: 
-* **[csls](csls)**: 
-* **[current-song](current-song)**: 
+* **[current-song](current-song)**: Scrobbles the currently play song details to STDOUT
 * **[d](d)**: 
 * **[deidle](deidle)**: 
 * **[delsubst](delsubst)**: 
@@ -76,8 +64,8 @@ Scripts
 * **[extract_addr](extract_addr)**: 
 * **[extract_addr.sed](extract_addr.sed)**: 
 * **[extract_alt_text](extract_alt_text)**: 
-* **[file-format](file-format)**: 
-* **[fileinfo](fileinfo)**: 
+* **[file-format](file-format)**: Reports line ending type for a group of files
+* **[fileinfo](fileinfo)**: Prints time & inode info about a file
 * **[find_co](find_co)**: 
 * **[find_encrypted](find_encrypted)**: 
 * **[find_folders](find_folders)**: 
@@ -98,7 +86,7 @@ Scripts
 * **[grok_mail_folder](grok_mail_folder)**: 
 * **[help](help)**: 
 * **[hex](hex)**: 
-* **[hostrename](hostrename)**: 
+* **[hostrename](hostrename)**: Portable host rename tool
 * **[html_title](html_title)**: 
 * **[html_unescape.sed](html_unescape.sed)**: 
 * **[idate](idate)**: 
@@ -122,14 +110,17 @@ Scripts
 * **[microseconds](microseconds)**: 
 * **[migrateuser](migrateuser)**: 
 * **[milliseconds](milliseconds)**: 
+* **[minicombine](minicombine)**: Produces an all-of-the-above blob from variant versions of text files
+* **[minidiff](minidiff)**: Produces Git-style output from variant versions of text files
+* **[minimerge](minimerge)**: Produces Git-style output from variant versions of text files
 * **[mk_ssh_access](mk_ssh_access)**: 
 * **[mkhtml](mkhtml)**: 
 * **[mklist](mklist)**: 
 * **[mkto](mkto)**: 
-* **[moz_bookmarks](moz_bookmarks)**: 
-* **[moz_export](moz_export)**: 
-* **[moz_find](moz_find)**: 
-* **[moz_menus](moz_menus)**: 
+* **[moz_bookmarks](moz_bookmarks)**: Shows Mozilla bookmarks within a menu
+* **[moz_export](moz_export)**: Makes a Mozilla importable .html file from a given bookmark folder
+* **[moz_find](moz_find)**: Free-text search on bookmark names or URLs
+* **[moz_menus](moz_menus)**: Shows all Mozilla menus
 * **[mozrecent_orphans.xsl](mozrecent_orphans.xsl)**: 
 * **[mozrecent_saved.xsl](mozrecent_saved.xsl)**: 
 * **[mprint](mprint)**: 
@@ -195,7 +186,7 @@ Scripts
 * **[spell](spell)**: 
 * **[splitlist](splitlist)**: 
 * **[ssh_fp](ssh_fp)**: 
-* **[ssh_fprint](ssh_fprint)**: 
+* **[ssh_fprint](ssh_fprint)**: Show all host key fingerprints & ASCII art
 * **[stripcomments](stripcomments)**: 
 * **[tfm](tfm)**: 
 * **[timestamp](timestamp)**: 
@@ -206,7 +197,6 @@ Scripts
 * **[update](update)**: 
 * **[update_index](update_index)**: 
 * **[urldequote](urldequote)**: 
-* **[userlist](userlist)**: 
 * **[vbd_dl](vbd_dl)**: 
 * **[vcf2del](vcf2del)**: 
 * **[vcf2list](vcf2list)**: 
@@ -218,4 +208,4 @@ Scripts
 * **[x](x)**: 
 * **[xsudo](xsudo)**: 
 * **[xwintitle](xwintitle)**: 
-* **[zonedate](zonedate)**: 
+* **[zonedate](zonedate)**: Prints a DNS zone file timestamp
