@@ -1,0 +1,30 @@
+#! /bin/sh
+#  (Bourne shell script) -- Parses .audpl files
+
+
+# *** FUNCTIONS ***
+decode()
+{
+  python3 -c "\
+import sys
+import urllib.parse
+for line in sys.stdin:
+  print(urllib.parse.unquote_plus(line.rstrip()))"
+}
+
+
+# *** MAINLINE ***
+## sed -n '/^artist=/ { s///p }' \
+awk '/^uri=/    {
+                  if (label) print(label);
+                  label = substr($0, index($0, "=") + 1);
+                }
+     /^artist=/ {
+                  artist = substr($0, index($0, "=") + 1);
+                  if (artist) label = artist;
+                }
+     END        { print(label); }' \
+    ${1-~/.config/audacious/playlists/1001.audpl} |
+  decode |
+  nl |
+  less -S

@@ -1,0 +1,10 @@
+#! /bin/sh
+# split_m3u (Bourne shell script) -- Create individual playlist files from a master list
+
+awk -F, '/^#EXTINF/ {
+                      filename = $2 ".m3u";
+                      trackline = $0;
+                      getline;
+                      location = $0;
+                      printf "#EXTM3U\n\n%s\n%s\n", trackline, location > filename;
+                    }'

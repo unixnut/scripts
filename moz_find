@@ -1,5 +1,5 @@
 #! /bin/sh
-# moz_find (Bourne shell script) -- Free-text search on bookmark names
+# moz_find (Bourne shell script) -- Free-text search on bookmark names or URLs
 
 if [ "$1" = -u ] ; then
   shift

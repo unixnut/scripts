@@ -1,0 +1,74 @@
+#! /bin/sh
+# vim-add (Bourne shell script) -- Adds a Vim package to the vim-pck config, then refreshes packages
+#
+# E.g.
+#  [[https://github.com/nicodebo/vim-pck]]
+#  package = nicodebo
+#  type = start
+
+if [ -z "$VIMPCKRC" ] ; then
+  VIMPCKRC=${XDG_HOME_CONFIG-~/.config}/vimpck/config
+fi
+
+if [ $1 = -o ] ; then
+  type=opt
+  shift
+else
+  type=start
+fi
+
+if [ $# -lt 1 ] ; then
+  echo "Usage: vim-add [-o] [<url_or_repo>]" >&2
+  exit 2
+fi
+
+# TO-DO: Check for trailing slash
+
+url_or_fullrepo=$1
+prefix=${url_or_fullrepo%/*}
+gh_user=${prefix##*/}
+if [ "$gh_user" = "$prefix" ] ; then
+  url=https://github.com/$url_or_fullrepo
+else
+  url=$url_or_fullrepo
+fi
+repo=${url_or_fullrepo##*/}
+
+mkdir -p ${VIMPCKRC%/*}
+
+if [ -f $VIMPCKRC ] && grep -q -F "[[$url]]" $VIMPCKRC
+then
+  echo "$url_or_fullrepo already added; bailing out"
+  exit
+fi
+
+echo Adding $url
+exec >> $VIMPCKRC
+
+if [ ! -s $VIMPCKRC ] ; then
+  echo '[REPOSITORY]'
+fi
+
+cat << EOT
+[[$url]]
+package = $gh_user
+type = $type
+EOT
+
+set -e
+
+dest=$HOME/.vim/pack/$gh_user/$type/$repo
+
+vimpck install >&2
+
+echo "Package directory: $dest" >&2
+
+if [ -d $dest/doc ] ; then
+  echo >&2
+  echo "Building documentation..." >&2
+  cd $dest
+  vim -u NONE -c "helptags doc" -c q >&2
+fi
+
+echo >&2
+echo "Done." >&2
