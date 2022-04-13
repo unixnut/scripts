@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#! /usr/bin/python3
 # vim: set fileencoding=utf-8 :
 # c_sans (Python script) -- Show the X509v3 Subject Alternative Names for PEM-format X.509 certificate(s)
 #
@@ -49,23 +49,23 @@ allowed_long_options=['help']
 
 # *** FUNCTIONS ***
 def show_help(dest=sys.stdout):
-    print >> dest, __doc__,
+    print(__doc__, end=' ', file=dest)
 
 
 def report_error(*msg):
-    print >> sys.stderr, self + ": Error:", msg
+    print(self + ": Error:", msg, file=sys.stderr)
 
 
 def report_warning(*msg):
-    print >> sys.stderr, self + ": Warning:", msg
+    print(self + ": Warning:", msg, file=sys.stderr)
 
 
 def report_notice(*msg):
-    print >> sys.stderr, self + ": Notice:", msg
+    print(self + ": Notice:", msg, file=sys.stderr)
 
 
 def cert_sans(f):
-    pem_data = f.read()
+    pem_data = f.read().encode('UTF-8')
     cert = cryptography.x509.load_pem_x509_certificate(pem_data, default_backend())
     ext = cert.extensions.get_extension_for_class(cryptography.x509.extensions.SubjectAlternativeName)
     return [dnsname.value for dnsname in ext.value]
@@ -73,7 +73,7 @@ def cert_sans(f):
 
 def print_cert_sans(f):
     for item in cert_sans(f):
-        print item
+        print(item)
 
 
 # *** MAINLINE ***
@@ -85,7 +85,7 @@ if __name__ == '__main__':
     # -- option handling --
     try:
         optlist, args = getopt.getopt(sys.argv[1:], allowed_options, allowed_long_options)
-    except getopt.GetoptError, e:
+    except getopt.GetoptError as e:
         report_error(e)
         sys.exit(1)
 
@@ -119,14 +119,12 @@ if __name__ == '__main__':
 
 
     # == processing ==
-    first = True
     if len(args) == 0:
-        print print_cert_sans(sys.stdin)
+        print_cert_sans(sys.stdin)
     else:
-        for filename in args:
-            if not first:
-                print "--------"
-            first = False         # Do this here to avoid missing out in case of error
+        for index, filename in enumerate(args):
+            if index != 0:
+                print("--------")
 
             try:
                 if filename == "-":
@@ -135,11 +133,12 @@ if __name__ == '__main__':
                     f = open(filename)
             except IOError as e:
                 # e.g. "[Errno 2] No such file or directory: 'berk'"
-                print e
+                print(e)
                 continue
 
-            print filename
+            if filename != "-":
+                print("%s:" % filename)
             try:
                 print_cert_sans(f)
             except ValueError as e:
-                print e
+                print(e)
