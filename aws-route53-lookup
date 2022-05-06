@@ -1,0 +1,9 @@
+#! /bin/sh
+# aws-route53-lookup (Bourne shell script) -- Look up multiple hosted zones IDs
+
+for zone
+do
+  id=$(aws route53 list-hosted-zones-by-name --dns-name $zone --max-items 1 --output=text |
+         sed -n '/^HOSTEDZONES/ s@.*/hostedzone/\([^[:space:]]\+\).*@\1@p')
+  echo $zone $id
+done
