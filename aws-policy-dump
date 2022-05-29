@@ -1,0 +1,40 @@
+#! /bin/bash
+# aws-policy-dump (Bash script) -- Outputs the latest version of a policy document
+
+SELF=aws-policy-dump
+
+if [ "$VISUAL" = vim ] ; then
+  if [ -n "$(type -p vless)" ] ; then
+    PAGER=(vless -c 'set ft=json' -)
+  else
+    PAGER=(view -)
+  fi
+elif [ -z "$PAGER" ] ; then
+  PAGER=less
+fi
+
+if [ $# -ne 1 -o -z "$1" ] ; then
+  echo "Usage: $SELF <polic_name|polic_arn>" >&2
+  exit 1
+fi
+
+if [ -z "$(type -p jq)" ] ; then
+  echo "$SELF: ERROR: 'jq' tool missing" >&2
+  exit 2
+fi
+
+account_id=$(aws sts --output=text get-caller-identity | cut -f1)
+case $1 in
+  arn:*) arn="$1" ;;
+  *)     arn="arn:aws:iam::$account_id:policy/$1" ;;
+esac
+
+ver=$(aws iam --output=json get-policy --policy-arn=$arn |
+        jq -r '.Policy.DefaultVersionId')
+
+aws iam --output=json get-policy-version --policy-arn=$arn --version-id=$ver |
+  if [ -t 1 ] ; then
+    "${PAGER[@]}"
+  else
+    cat
+  fi
