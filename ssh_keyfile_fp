@@ -1,0 +1,364 @@
+#! /bin/sh
+# ssh_keyfile_fp (Bourne shell script) -- Shows various fingerprint formats of a file
+#
+# Supports public or private keys in the following formats:
+#   - PKCS#1 (PEM; RFC 8017)
+#   - PKCS#8 (PEM; RFC 5208/5958; encrypted or plain)
+#   - SSH2 (RFC 4716)
+#   - PuTTY
+#   - OpenSSH (for private keys see https://coolaj86.com/articles/the-openssh-private-key-format/)
+#
+# AWS uses different algorithms for RSA keys (instead of the OpenSSH ones) as
+# described here: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/verify-keys.html
+#   - Imported: MD5 sum of binary public key
+#   - Amazon-created: SHA1 sum of binary private key
+# For ED25519 (either origin) it uses the OpenSSH SHA256-based algorithm
+#
+#
+# Keywords: ssh AWS EC2 security
+#
+# See also: https://www.cryptosys.net/pki/rsakeyformats.html
+#
+# Notes:
+#   - If a command fails to decode a key, `openssl md5 -c` will produce the MD5
+#     hash of the empty string: d4:1d:8c:d9:8f:00:b2:04:e9:80:09:98:ec:f8:42:7e
+#
+#   - ssh-keygen doesn't accept "-" as an argument to the -f option, except
+#     for its -l subcommand
+
+# *** DEFINITIONS ***
+SELF=ssh_keyfile_fp
+EXIT_CMDLINE=1
+EXIT_FORMAT=2
+EXIT_MISSING=3
+EXIT_PRIVKEY=4
+EXIT_PUBKEY=5
+EXIT_UNSUPPORTED=6
+EXIT_TOOLERR=7
+
+
+# *** FUNCTIONS ***
+handle_error()
+{
+  case $1 in
+    1) echo "$SELF: ERROR: Can't extract private key" >&2
+       exit $EXIT_PRIVKEY
+       ;;
+
+    2) echo "$SELF: ERROR: Can't extract public key" >&2
+       exit $EXIT_PUBKEY
+       ;;
+  esac
+}
+
+
+show_fp_amazon()
+{
+  # Function's stdin is DER-encoded PKCS#8 public key
+  echo -n "Amazon: "
+  openssl md5 -c | cut -d' ' -f2-
+}
+
+
+show_fp_amazon_created()
+{
+  # Function's stdin is PEM-encoded PKCS#8 public key
+  echo -n "Amazon-created: "
+  # Throw away the "writing RSA key" message
+  openssl pkcs8 -inform PEM -outform DER -topk8 -nocrypt 2>/dev/null |
+    openssl sha1 -c |
+    cut -d' ' -f2-
+}
+
+
+show_fp_openssh()
+{
+  # Function's stdin is OpenSSH public key
+  echo -n "OpenSSH: "
+  ssh-keygen -l -f -
+}
+
+
+# Usage: show_fp <file> <to_der_cmd> <to_openssh_cmd>
+show_fp()
+{
+  cat "$1" | $3 | show_fp_openssh
+  cat "$1" | $2 | show_fp_amazon
+}
+
+
+# Usage: show_pubkey_fp <PEM pubkey data>
+show_pubkey_fp()
+{
+  echo "$1" |
+    ssh-keygen -i -m PKCS8 -f /dev/stdin |
+      show_fp_openssh
+
+  echo "$1" |
+    PKCS8_der |
+    show_fp_amazon
+}
+
+
+# Usage: show_privkey_fp <file>
+show_privkey_fp()
+{
+  # Obtain the key once so the user is prompted for the passphrase (if any) once
+  # Throw away the "writing RSA key" message
+  local pubkey
+  if pubkey="$(openssl rsa -in "$1" -pubout 2>/dev/null)"
+  then
+    show_pubkey_fp "$pubkey"
+  else
+    return 1
+  fi
+}
+
+
+# Show OpenSSH and Amazon imported fingerprints (but not the Amazon-created one
+# as the PuTTY private key can't yet be extracted but AWS can generate .ppk files)
+#
+# Usage: show_putty_privkey_fp <file>
+show_putty_privkey_fp()
+{
+  # In PuTTY key files, the public key is not protected by the passphrase.
+  # Extract it using sed(1) given that the format is trivially parsable
+  # https://tartarus.org/~simon/putty-snapshots/htmldoc/AppendixC.html
+  local key_openssh="$(sed -n -e "# Hold the key type (e.g. ssh-rsa) after the colon" \
+                              -e '1 { s/.*:[[:space:]]*\(.*\)/\1 / ; h }' \
+                              -e "# Delete the key-value lines before the multiline public key" \
+                              -e '1,/Public-Lines:/d' \
+                              -e "# Cycle through and hold the public key lines until a key-value line" \
+                              -e '/:/! { H ; d }' \
+                              -e "# Get the held lines (key type plus key), then join and print them, then quit" \
+                              -e g \
+                              -e 's/\n//gp ; q' "$file")"
+
+  echo "$key_openssh" | show_fp_openssh
+  echo "$key_openssh" | OpenSSH_der | show_fp_amazon
+}
+
+
+# Shows OpenSSH and both Amazon fingerprints (created and imported) if it's an
+# RSA key, or the single fingerprint for ED25519
+# Usage: show_pem_privkey_fp <PKCS#1 private key file>
+show_pem_privkey_fp()
+{
+  local key_pkcs8 pubkey
+
+  # Note: `ssh-keygen -l -f ...` works with unencrypted PKCS#1 files but not encrypted ones
+  #       (in the latter case, it will read the corresponding .pub file or bail if it's missing)
+
+  # This simplistic command could be used but it doesn't allow extraction of
+  # the public key:
+  #   openssl pkcs8 -in "$1" -inform PEM -outform DER -topk8 -nocrypt
+  # The private key can't be extracted as DER because shell variables can't
+  # hold binary data, hence the two `openssl pkcs8` commands: one to decrypt &
+  # extract the private key (in PEM format); and the other as part of the
+  # Amazon-created fingerprint logic that converts the private key to DER
+  # format.
+
+  # Obtain the key once so the user is prompted for the passphrase (if any) once
+  if key_pkcs8="$(openssl pkcs8 -in "$1" -inform PEM -topk8 -nocrypt)"
+  then
+    # Throw away the "writing RSA key" message
+    if pubkey="$(echo "$key_pkcs8" | openssl rsa -pubout 2>/dev/null)"
+    then
+      # This shows 2 fingerprints
+      show_pubkey_fp "$pubkey"
+    else
+      return 2
+    fi
+    echo "$key_pkcs8" | show_fp_amazon_created
+  else
+    return 1
+  fi
+}
+
+
+# Shows OpenSSH and both Amazon fingerprints (created and imported) if it's an
+# RSA key or the single fingerprint for ED25519
+#
+# Usage: show_openssh_privkey_fp <OpenSSH private key file>
+show_openssh_privkey_fp()
+{
+  local fp key_pkcs8 pubkey temp_keyfile
+
+  fp=$(ssh-keygen -l -f "$file")
+
+  case "$fp" in
+    *"(ED25519)")
+      echo "OpenSSH/Amazon: $fp"
+      ;;
+
+    *) # E.g. (RSA)
+      echo "OpenSSH: $fp"
+
+      # Have to use a temporary file to export the private key because
+      # ssh-keygen won't export it to a new file, just overwrite it
+      # (see OpenSSH_der() for details about ssh-keygen(1)'s LIES regarding -e)
+      if temp_keyfile=$(mktemp)
+      then
+        cp -f "$file" $temp_keyfile
+        trap "rm -rf $temp_keyfile" EXIT
+
+        # Use -N '' to not set a passphrase
+        # -q doesn't silence ssh-keygen -p; -m PKCS8 doesn't work
+        if ssh-keygen -p -N '' -m PEM -f $temp_keyfile >/dev/null
+        then
+          :
+        else
+          echo "$SELF: ERROR: 'ssh-keygen' failed [$?]" >&2
+          return 1
+        fi
+      else
+        echo "$SELF: ERROR: 'mktemp' failed [$?]" >&2
+        return 1
+        ## exit $EXIT_TOOLERR
+      fi
+
+      # Throw away the "writing RSA key" message
+      if pubkey="$(openssl rsa -in $temp_keyfile -pubout 2>/dev/null)"
+      then
+        echo "$pubkey" | PKCS8_der | show_fp_amazon
+      else
+        return 2
+      fi
+      # Strictly speaking, this is unlikely to ever matter unless someone 
+      # converted an Amazon-created .pem file into an OpenSSH private key file
+      # (e.g. to add a passphrase)
+      cat "$temp_keyfile" | show_fp_amazon_created
+      ;;
+  esac
+}
+
+
+PKCS8_der()
+{
+  # Throw away the "writing RSA key" message
+  openssl rsa -pubin -outform DER 2>/dev/null
+}
+
+
+# Converts SSH2 to OpenSSH (intermediate format) to PKCS#8 (DER format)
+RFC4716_der()
+{
+  ssh-keygen -i -m RFC4716 -f /dev/stdin |
+    OpenSSH_der
+}
+
+
+# Takes an OpenSSH public key on stdin and exports the public key in DER format
+# (The ssh-keygen(1) manual is unclear; it ONLY exports public keys and it LIES
+# about accepting a private key; if given one as a file, it will look for and
+# read the corresponding .pub file)
+OpenSSH_der()
+{
+  ssh-keygen -e -m PKCS8 -f /dev/stdin |
+    PKCS8_der
+}
+
+
+PKCS1_der()
+{
+  # -RSAPublicKey_in is like -pubin but for PKCS#1 files
+  # Throw away the "writing RSA key" message
+  openssl rsa -RSAPublicKey_in -outform DER 2>/dev/null
+}
+
+
+# *** MAINLINE ***
+# TO-DO: check for mktemp(1) from 'coreutils'
+
+set -e
+case $# in
+  0)  file=-
+      ;;
+
+  1)  if [ ! -f "$1" ] ; then
+        echo "$SELF: File not found: $1" >&2
+        exit $EXIT_MISSING
+      fi
+      file=$1
+      ;;
+
+  *)  echo "Usage: $SELF <file>" >&2
+      exit $EXIT_CMDLINE
+      ;;
+esac
+
+# Check for a single-line file
+if [ $(wc -l "$file" | cut -d' ' -f1) -eq 1 ] ; then
+  # OpenSSH public key (see RFC 4253)
+  show_fp "$file" OpenSSH_der cat
+else
+  case "$(head -n1 "$file" | tr -d '\r')" in
+    "---- BEGIN SSH2 PUBLIC KEY ----")
+      # PEM: RFC 4716
+      show_fp "$file" RFC4716_der "ssh-keygen -i -m RFC4716 -f /dev/stdin"
+      ;;
+
+    "-----BEGIN RSA PUBLIC KEY-----")
+      # PEM: PKCS#1 (RFC 8017) -- OpenSSH calls this "PEM" format
+      show_fp "$file" PKCS1_der "ssh-keygen -i -m PEM -f /dev/stdin"
+      ;;
+
+    "-----BEGIN PUBLIC KEY-----")
+      # PEM: PKCS#8 (RFC 5208 and RFC 5958)
+      show_fp "$file" PKCS8_der "ssh-keygen -i -m PKCS8 -f /dev/stdin"
+      ;;
+
+    "-----BEGIN EC PRIVATE KEY-----")
+      # PEM: SEC 1: Elliptic Curve Cryptography <http://www.secg.org/>
+      echo "$SELF: ERROR: EC format unsupported" >&2
+      exit $EXIT_UNSUPPORTED
+      ;;
+
+    "-----BEGIN RSA PRIVATE KEY-----")
+      # PEM: PKCS#1 (RFC 8017) -- OpenSSH calls this "PEM" format
+      # OpenSSH legacy, PuTTY alternate, etc.; this is the format generated by AWS for RSA keys
+      if show_pem_privkey_fp "$file"
+      then
+        :
+      else
+        handle_error $? show_pem_privkey_fp
+      fi
+      ;;
+
+    "-----BEGIN PRIVATE KEY-----")
+      # PEM: PKCS#8
+      if show_privkey_fp "$file"
+      then
+        :
+      else
+        handle_error $? show_privkey_fp
+      fi
+      ;;
+
+    "-----BEGIN ENCRYPTED PRIVATE KEY-----")
+      # PEM: PKCS#8
+      show_privkey_fp "$file"
+      ;;
+
+    "-----BEGIN OPENSSH PRIVATE KEY-----")
+      # PEM: OpenSSH; this is the format generated by AWS for ED25519 keys
+      if show_openssh_privkey_fp "$file"
+      then
+        :
+      else
+        handle_error $? show_openssh_privkey_fp
+      fi
+      ;;
+
+    PuTTY-User-Key-File*)
+      ## echo "PuTTY Key File format not yet supported" >&2
+      ## exit $EXIT_UNSUPPORTED
+      show_putty_privkey_fp "$file"
+      ;;
+
+    *)
+      echo "Unknown Key File format" >&2
+      exit $EXIT_FORMAT
+      ;;
+  esac
+fi
