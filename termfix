@@ -1,0 +1,11 @@
+#! /bin/sh
+# termfix (Bourne shell script) -- Reset the terminal to a good state
+#
+# This will switch back to the "primary window" but won't clear the screen
+# (unlike `tput reset` or `reset`).
+#
+# See terminfo(5) for more information on capability strings (etc.) usable by tput(1).
+
+stty sane
+tput init
+tput rmcup
