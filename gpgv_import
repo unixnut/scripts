@@ -1,0 +1,4 @@
+#! /bin/sh
+#  (Bourne shell script) -- 
+
+gpg --import --no-default-keyring --keyring trustedkeys.gpg
