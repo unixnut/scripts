@@ -50,8 +50,15 @@ amarok_song()
 }
 
 
+playerctl_song()
+{
+  playerctl metadata | sed -n 's/^[^ ]\+ xesam:title \+//p'
+}
+
+
 # *** MAINLINE ***
 case "$MUSIC_PLAYER" in
+  _detect)      playerctl_song ;;
   audacious)	audtool current-song ;;
   rhythmbox)	rhythmbox-client --print-playing ;;
   amarok)	amarok_song ;;
