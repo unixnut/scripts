@@ -2,4 +2,5 @@
 # fix_vimfile  (Bourne shell script) -- Strips out everything from a .vim file except buffers
 
 sed -i.bak '/^\(tab\|edit\|l\?cd \|wincmd\|badd \|split\|[0-9]*wincmd \|if bufexists\)/ !d
+/^wincmd _/d
 ## s/^edit/spl/' "$@"
