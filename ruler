@@ -1,0 +1,110 @@
+#! /usr/bin/python3
+# vim: set fileencoding=utf-8 tabstop=4 shiftwidth=4 :
+# ruler (Python script) -- Shows a one-line ruler the width of the terminal
+#
+# Version:   1.0
+# Copyright: (c)2022 Alastair Irvine <alastair@plug.org.au>
+# Keywords:  
+# Notice:    
+# Licence:   This file is released under the GNU General Public License
+#
+'''Description:
+  
+Usage: 
+Options:
+  
+
+Example:
+----+----^----+-{20^}----+----^----+-{40^}----+----^----+-{60^}----+----^----+-{80^}---
+Alternative:
+----+----^----+--20^-----+----^----+--40^-----+----^----+--60^-----+----^----+--80^----
+'''
+# Licence details:
+#     This program is free software; you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation; either version 2 of the License, or (at
+#     your option) any later version.
+#
+#     See http://www.gnu.org/licenses/gpl-2.0.html for more information.
+#
+#     You can find the complete text of the GPLv2 in the file
+#     /usr/share/common-licenses/GPL-2 on Debian systems.
+#     Or see the file COPYING in the same directory as this program.
+#
+#
+# TO-DO:
+#   - Allow `start_char` and `end_char` to be changed
+#   - Option to override column detection
+
+import sys
+import os
+
+
+self="ruler"
+allowed_options='hd'
+allowed_long_options=['help']
+
+
+# *** DEFINITIONS ***
+DEFAULT_COLUMNS = 80
+
+
+# *** CLASSES ***
+
+# *** FUNCTIONS ***
+def show_help(dest=sys.stdout):
+    print(__doc__.rstrip(), file=dest)
+
+
+def report_error(msg):
+    print(self + ": Error: " + msg, file=sys.stderr)
+
+
+def report_warning(msg):
+    print(self + ": Warning: " + msg, file=sys.stderr)
+
+
+def report_notice(msg):
+    print(self + ": Notice: " + msg, file=sys.stderr)
+
+
+def padded_block_number(i, start="{"):
+    val = "%s%d" % (start, (i+1) * 20)
+    return "-" + val if len(val) == 3 else val
+
+
+# For cmdline args, use argv[1:].  argv[0] is program filename.
+def main(argv):
+    """Acts like main() in a C program.  Return value is used as program exit code."""
+
+    # == sanity checking ==
+
+
+    # == preparation ==
+    start_char = "{"; end_char = "}"
+
+    # Note: `os.getenv('COLUMNS', DEFAULT_COLUMNS)` doesn't work normally, only
+    # if $COLUMNS has been set in the environment explicitly, which the shell
+    # doesn't do, so use an ioctl(2) call to query the pty driver
+    try:
+        info = os.get_terminal_size()
+        num_columns = info.columns
+    except OSError:
+        num_columns = os.getenv('COLUMNS', DEFAULT_COLUMNS)
+    ## print(num_columns)
+
+
+    # == processing ==
+    # A block is a 20-character mini-ruler like "----+----^----+-{20^" or "}---+----^----+-{40^"
+    num_blocks = (num_columns // 20) + 1
+    line = "-" + end_char.join("---+----^----+%s^" % padded_block_number(i, start_char)
+                                 for i in range(num_blocks))
+    print(line[0:num_columns], end='')
+    ## print(line)
+
+    return 0
+
+
+# *** MAINLINE ***
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
