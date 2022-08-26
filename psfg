@@ -1,0 +1,11 @@
+#! /bin/sh
+# psfg (Bourne shell script) -- similar to `ps f -efww` but with groups
+#
+# Doesn't use $PAGER because more(1) doesn't support the -S option and it's
+# needed to stop less(1) wrapping lines
+#
+# TO-DO:
+#   - Date & time in less(1) prompt
+
+ps f -eww -O ppid,user,group,stime,stat |
+  less -S
