@@ -8,4 +8,5 @@
 
 stty sane
 tput init
-tput rmcup
+tput cnorm  # Turn on cursor
+tput rmcup  # Switch back to primary page
