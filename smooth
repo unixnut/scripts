@@ -9,9 +9,10 @@
 #   -M/--mercurial/-G/--git  Force repo type 
 #   -r      (Git only) recursive clone
 #   -o      (Git only) Specify remote to create/use
-#   -b      (Git only) Specify remote branch to push to
+#   -b      (Git only) Specify local branch
+#   -B      (Git only) Specify remote branch to push to
 #
-# Version: 1.4.9
+# Version: 1.5.0
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: git svn hg source-control wrapper
 # Requires: bash v4.0+
@@ -40,8 +41,8 @@
 #   + select branch/remote for 'here', 'transfer', etc.
 
 self=$(basename "$0")
-allowed_options=dsqCfrMGo:b:m:
-allowed_long_options=quiet,force,mercurial,git,origin=,branch=,remote-branch=,message=
+allowed_options=dsqCfrMGo:b:B:m:
+allowed_long_options=quiet,force,mercurial,git,origin=,branch=,local-branch=,remote-branch=,message=
 
 
 # *** FUNCTIONS ***
@@ -110,8 +111,8 @@ git_which_branch()
   ## # force output of branch name
   ## [ $debug -ge 3 ] && exec 2>&1
 
-  if [ -n "$remote_branch" ] ; then
-    echo "$remote_branch"
+  if [ -n "$local_branch" ] ; then
+    echo "$local_branch"
   else
     git_current_branch
   fi
@@ -119,8 +120,8 @@ git_which_branch()
 
 
 # Outputs the name of the remote for the appropriate branch (current or
-# specified, i.e. present in $branch) or nothing (and an non-zero exit code) if
-# the branch doesn't exist or doesn't have a remote.
+# specified, i.e. present in $local_branch) or nothing (and an non-zero exit
+# code) if the branch doesn't exist or doesn't have a remote.
 git_remote()
 {
   local branch
@@ -552,7 +553,7 @@ if [ -z "$BASH_VERSION" ] ; then
   echo "${self}: Error: script must be run as a program" >&2
   exit 4
 else
-  if (( BASH_VERSINFO[0] < 4 || BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 1)) ; then
+  if ((BASH_VERSINFO[0] < 4 || BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 1)) ; then
     echo "${self}: Error: bash v4.0+ required" >&2
     exit 4
   fi
@@ -688,7 +689,11 @@ while [ x"$1" != x-- ] ; do
       origin_name=$2
       shift
       ;;
-    -b|--branch|--remote-branch)
+    -b|--branch|--local-branch)
+      local_branch=$2
+      shift
+      ;;
+    -B|--remote-branch)
       remote_branch=$2
       shift
       ;;
