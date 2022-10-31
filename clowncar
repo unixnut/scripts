@@ -1,7 +1,7 @@
 #! /bin/bash
 # clowncar (BASH script) -- wrapper for useradd that manages SSH public key
 #
-# Version: 1.2
+# Version: 1.3
 # Copyright: (c) 2014 Alastair Irvine <alastair@plug.org.au>
 # Keywords: ssh security user
 # Notice: Can cause security weaknesses in some cases.  See Warnings below.
@@ -50,6 +50,7 @@
 # Options:
 #   -L   Create the account with a locked & empty password (default useradd behaviour)
 #   -O <output_filename>     Instead of running the commands, save them to a script file
+#   -P <file.yml>            Generate an Ansible playbook to create the user
 #   -V   (debug mode) Displays the command line before execution (amongst other things)
 #
 #
@@ -84,8 +85,6 @@ USERADD=/usr/sbin/useradd
 # and SSH key "baked in"
 clowncar_factory()
 {
-  set_ssh_key
-
   # Wrap args in single quotes.  For each existing single quote within an arg,
   #   1) end quoting
   #   2) inserted a backslash-quoted single quote
@@ -121,6 +120,76 @@ set -- $args" \
 }
 
 
+clowncar_ansible_factory()
+{
+  ALLOWED_OPTIONS=c:g:G:mMs:d:u:
+  ALLOWED_LONG_OPTIONS=help,verbose
+
+  # -- function option handling --
+  set -e
+  orthogonal_opts=$(getopt --shell=sh --name=$SELF \
+    --options=+$ALLOWED_OPTIONS --longoptions=$ALLOWED_LONG_OPTIONS -- "$@")
+  eval set -- "$orthogonal_opts"
+  set +e      # getopt would have already reported the error
+
+  while [ x"$1" != x-- ] ; do
+    case "$1" in
+      -c) comment="$2" ; shift ;;
+      -g) group="$2" ; shift ;;
+      -G) groups="$2" ; shift ;;
+      -m) create_home=yes ;;
+      -M) create_home=no ;;
+      -s) shell="$2" ; shift ;;
+      -u) uid="$2" ; shift ;;
+      -d) home="$2" ; shift ;;
+    esac
+    shift     # get rid of option (or if the inner shift already did, get rid of arg)
+  done
+  shift       # get rid of the "--"
+
+  exec > "$output_filename"
+
+  cat <<EOT1
+---
+  - hosts: all
+    gather_facts: false
+    become: true
+
+    tasks:
+      - user:
+          name:        $username
+EOT1
+
+  [ -n "$comment" ] &&     echo "          comment:     '$comment'"
+  [ -n "$shell" ] &&       echo "          shell:       $shell"
+  [ -n "$create_home" ] && echo "          create_home: $create_home"
+  [ -n "$home" ] &&        echo "          home:        $home"
+  [ -n "$uid" ] &&         echo "          uid:         $uid"
+  [ -n "$group" ] &&       echo "          group:       $group"
+  [ -n "$groups" ] &&      echo "          groups:      $groups"
+
+  if [ $locked = y ] ; then
+    echo "          password_lock: yes"
+  else
+    echo "          password: ''"
+  fi
+
+  if [ $locked = n ] ; then
+    cat << EOT_EXPIRE
+
+      - command: chage -d 0 $username
+EOT_EXPIRE
+  fi
+
+  cat << EOT_KEY
+
+      - authorized_key:
+          user: $username
+          key:  "$ssh_key"
+EOT_KEY
+}
+
+
 set_ssh_key()
 {
   # Only prompt if running on a terminal
@@ -142,15 +211,21 @@ fi
 # -- defaults --
 locked=n
 # -- end defaults --
+ansible=n
 debug=0
 
 # -- option handling --
 # this is handled strangely because the rest of the arguments are passed to
 # useradd (which uses the following capital letter options: D, G, K, M, N, U, Z)
-while [ x"$1" = x-L -o x"$1" = x-O -o x"$1" = x-V ] ; do
+while [ "$1" = -L -o "$1" = -O -o "$1" = -V -o "$1" = -P ] ; do
   case "$1" in
     -O)
       output_filename="$2"
+      shift   # get rid of the option; argument gets done below
+      ;;
+    -P)
+      output_filename="$2"
+      ansible=y
       shift   # get rid of the option; argument gets done below
       ;;
     -L)
@@ -178,8 +253,14 @@ username="${@: -1}"
 
 # == preparation ==
 if [ -n "$output_filename" ] ; then
+  set_ssh_key
+
   # mode switch!
-  clowncar_factory "$@"
+  if [ $ansible = y ] ; then
+    clowncar_ansible_factory "$@"
+  else
+    clowncar_factory "$@"
+  fi
   exit $?
 fi
 
