@@ -11,7 +11,7 @@
 use open ':locale';
 use Getopt::Long;
 
-use Text::Autoformat qw(autoformat break_at break_wrap);
+use Text::Autoformat qw(autoformat break_at break_wrap break_TeX);
 
 
 # *** DEFINITIONS ***
@@ -30,7 +30,7 @@ or die("Error in command line arguments\n");
 
 while (<>)
 {
-  $_ = autoformat($_, { break => break_wrap, justify => 'full',
+  $_ = autoformat($_, { break => break_TeX, justify => 'full',
                         left => $indent, right => $width + $indent });
   if (eof)
   {
