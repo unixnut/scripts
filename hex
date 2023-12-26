@@ -10,7 +10,7 @@
 #
 '''Description: Decodes the command-line parameter, or stdin
   
-Usage:   hex [ <string> ]
+Usage:   hex [ -n | -s <sep> ] [ <string> ]
 Options:
   
 '''
@@ -28,6 +28,7 @@ Options:
 #
 #
 # TO-DO:
+#   + special last-line handling for sep
 
 from __future__ import print_function
 import sys
@@ -36,8 +37,8 @@ import sys, binascii
 
 
 self="hex"
-allowed_options='hd'
-allowed_long_options=['help']
+allowed_options='hdns:'
+allowed_long_options=['help', 'nosep', 'sep=']
 
 
 # *** CLASSES ***
@@ -59,9 +60,12 @@ def report_notice(msg):
     print(self + ": Notice: " + msg, file=sys.stderr)
 
 
-def process(source):
+def process(source, sep = None):
     for line in source:
-        print(binascii.unhexlify(line))
+        if sep is False or sep is None:
+            print(binascii.unhexlify(line))
+        else:
+            print(binascii.unhexlify(line), end=sep)
 
 
 # *** MAINLINE ***
@@ -82,8 +86,10 @@ if __name__ == '__main__':
     params = defaultdict(bool)
 
     for option, opt_arg in optlist:
-        if option == "-n":
-            params["no_fetch"] = True
+        if option in ("--nosep", "-n"):
+            params["sep"] = ""
+        elif option in ("--sep", "-s"):
+            params["sep"] = opt_arg
         elif option == "-d":
             debug += 1
         elif option == "-h" or option == "--help":
@@ -103,4 +109,4 @@ if __name__ == '__main__':
     else:
         source = iter(args)
 
-    process(source)
+    process(source, params["sep"])
