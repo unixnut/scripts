@@ -13,18 +13,21 @@
 # GNU tar rewrites the metadata file during each invocation, so run this script
 # before `tar -g .../backup.meta ...`.
 #
-# Usage: bbump [ -u | -i | <level> ]
+# Usage: bbump [ -n ] [ -u | -i | <level> ]
 # Where:
+#   -n          No act, i.e. print what would be done but take no action
 #   <level>     (Not currently supported.)
-#   -u          Means go up a level (and do a full backup) instead of
-#               continuing a branch.
-#   -i          Add an incremental branch off the latest full backup
+#   -u          Means go up a level (and do a full or differential backup)
+#               instead of continuing a branch.
+#   -i          Add an incremental branch off the latest backup
 #
 # In the example, each amount of indent (starting at 1) corresponds to a level.
 # The first level is considered the highest.
-# Each incremental (i.e. not full) tarball is relative to either the previous
-# contiguous one at the same level, or in the case a backup ending with .1, the
-# one at the higher level:
+# Each incremental (i.e. not full or differential) tarball is relative to
+# either the previous contiguous one at the same level.  Each differential tarball is
+# relative to the previous one (contiguous or otherwise) at the same level.
+# Exception: non-full tarballs ending with .1 are relative to the preceding
+# tarball at the higher level.  
 #
 #   backup.1.meta
 #   backup.2.meta
@@ -42,13 +45,10 @@
 # It doesn't make sense to "go back in time" and create a continuation
 # of a previous "branch" (at either the same level or a sub-branch) when
 # there is a more recent higher-level branch in existence.  
-# It is not currently possible to create sub-branches, so only two
-# levels are currently supported; full backups at the highest level and
-# incrementals.  As a consequence of this, differential backups are not
-# currently supported.
 
 SELF=bbump
-DIR=${BBUMP_DIR:-/tmp/i}
+DIR=${BBUMP_DIR:-/srv/mail/work}
+## DIR=/tmp/i
 
 # *** FUNCTIONS ***
 # Usage: regular_bump <filename> [ y ]
@@ -57,11 +57,12 @@ regular_bump()
 {
   if [ ${2-n} = y ] ; then
     # Append a .1 to the given increment, i.e. start a new, lower level
-    newfile="$t.1.meta"
+    new_file="$t.1.meta"
   else
     # Increment count at current level
-    newfile="$p.$((increment + 1)).meta"
+    new_file="$p.$((increment + 1)).meta"
   fi
+  old_file=$last_file
 }
 
 
@@ -73,11 +74,18 @@ higher_bump()
   fi
 
   upper_increment=${p##*.}  # Get lowest-level increment from parent
-  newfile="${p%.*}.$((upper_increment + 1)).meta"
+  new_file="${p%.*}.$((upper_increment + 1)).meta"
+  old_file=$p.meta
 }
 
 
 # *** MAINLINE ***
+verbose=0
+if [ "x$1" = x-n ] ; then
+  no_act=y
+  shift
+fi
+
 new_incr=n
 if [ "x$1" = x-i ] ; then
   new_incr=y
@@ -109,34 +117,41 @@ fi
 t=${last_file%.meta}
 p=${t%.*}
 increment=${t##*.}
-# Set $newfile
+# Set $new_file
 if [ $go_up = y ] ; then
   higher_bump $last_file
+  if [ "$no_act" = y -o $verbose -ge 1 ] ; then
+    echo "$old_file -> $new_file"
+  fi
 else
   if [ "$p" = $DIR/backup ] ; then
     # Bail out here if defaulting to a full backup is not desired
     :
   else
-    # Check this here so it doesn't cause problems down the track when going up
-    if [ $new_incr = y ] ; then
-      echo "$SELF: Differential backups are not currently supported." >&2
-      exit 5
-    fi
+    # New branch from parent
+    :
   fi
   regular_bump $last_file $new_incr
+  if [ "$no_act" = y -o $verbose -ge 1 ] ; then
+    echo "$old_file ($increment) -> $new_file"
+  fi
 fi
 
+if [ "$no_act" = y ] ; then
+  echo "Bailing out as requested."
+  exit
+fi
 
-echo $newfile
-newfile_t=${newfile%.*}
-if [ "${newfile_t%.*}" = $DIR/backup ] ; then
+echo $new_file
+new_file_t=${new_file%.*}
+if [ "${new_file_t%.*}" = $DIR/backup ] ; then
   # Don't copy anything (just create the symlink) when making a top level
   # increment because we want GNU tar to create the file from scratch
   echo full
 else
   # For an incremental backup, GNU tar reads the file and then rewrites an
   # updated version
-  cp -pi $last_file $newfile
+  cp -pi $old_file $new_file
 fi
 
-ln -s --force $newfile $DIR/backup.meta
+ln -s --force $new_file $DIR/backup.meta
