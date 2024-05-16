@@ -5,7 +5,8 @@ USER_SCRIPTS=aws-host-fingerprints find_swapfiles seconds milliseconds \
   c_dump c_fprint c_hash c_info c_issuer c_name c_sans.py c_verify \
   k_dump k_pubkey r_dump r_name \
   s_dump_http s_dump_imap s_dump_imaps s_dump_pop3 s_dump_pop3s s_dump_smtp s_dump_smtps s_dump_ldap s_dump_ldaps \
-  s_verify_http s_verify_imap s_verify_imaps s_verify_pop3 s_verify_pop3s s_verify_smtp s_verify_smtps s_verify_ldap s_verify_ldaps
+  s_verify_http s_verify_imap s_verify_imaps s_verify_pop3 s_verify_pop3s s_verify_smtp s_verify_smtps s_verify_ldap s_verify_ldaps \
+  psff urlresolve
 
 USER_SCRIPT_LINKS=c_fp c_sans
 # ... TO-DO: mkhtml or makehtml

@@ -1,0 +1,257 @@
+#! /usr/bin/python3
+'''urlresolve (Python script) -- resolve known URL-wrapping methods and nested
+                                 HTTP redirects to get a "real" URL
+Keywords: web RFC1738 URI url cgi-bin http filename
+Version: 2.4.0
+
+Options:
+  -n          don't attempt to fetch the URL once it has been unwrapped
+  -v          show intermediate URLs
+  -p          passthru mode; ignore nested URLs (which might be spurious)
+'''
+# TO-DO: process EOLs in lines correctly
+# FIXME: handle multiple URLs on a line
+
+
+import re
+import sys
+import urllib.request, urllib.parse, urllib.error
+import http.client
+import getopt
+
+
+self="urlresolve"
+
+DEFAULT_METHOD = 'HEAD'
+BASIC_LI_REGEX = r'.*(share\?.*|redirect\?)url=([^&]*).*'
+
+
+def deli_track(matchgroup):
+    'extract the substring from a LinkedIn tracking regex'
+    inner_url = urllib.parse.unquote_plus(matchgroup.group(1))
+    # look for a 2nd level of wrapping
+    m = re.match(BASIC_LI_REGEX, inner_url)
+    if m != None:
+        # the inner URL is encoded as well, assume it's by LinkedIn
+        return_value = deli(m)
+    else:
+        # some URLs (e.g. LinkedIn groups) are only encoded once
+        return_value = inner_url
+    return return_value
+    
+def deli(matchgroup):
+    'extract the substring from a LinkedIn share/redirect regex'
+    return urllib.parse.unquote_plus(matchgroup.group(2))
+
+def deyahoo(matchgroup):
+    'extract an e-mail addr from a Yahoo! mail compose link'
+    return urllib.parse.unquote_plus(matchgroup.group(1))
+
+def strip_mailto_proto(matchgroup):
+    global paramstr
+    url = matchgroup.group(1)      # addr
+    paramstr = matchgroup.group(2)     # subject, etc. (if supplied)
+    return url
+
+def strip_file_proto(matchgroup):
+    return urllib.parse.unquote_plus(matchgroup.group(1))
+
+def degoogle(matchgroup):
+    'extract an encoded Google search result'
+    return urllib.parse.unquote_plus(matchgroup.group(1))
+
+
+def debasic(matchgroup):
+    return urllib.parse.unquote_plus(matchgroup.group(1))
+
+
+# For double-encoded URLs
+def dedouble(matchgroup):
+    return unwrap(urllib.parse.unquote_plus(matchgroup.group(1)))
+
+
+def unquopri(s):
+    import quopri
+    return quopri.decodestring(s)
+
+
+def passthru(s):
+    return s
+
+
+# List of (regex, decodefn) tuples
+# or (regex, decodefn, True) to ignore case when matching
+DECODERS = [(r'(https?%3a%2f%2f.*)', debasic, True),
+            (r'.*?(\w+%253A.*)', dedouble),
+            (r'.*\?viewArticle.*articleURL=([^&]*).*', debasic),
+            (r'.*confirm.aspx\?httpDown=([^&]*).*', debasic),
+            (r'.*/nus-trk\?.*url=([^&]*).*', deli_track),
+            (BASIC_LI_REGEX, deli),
+            (r".*/url\?q=([^&]*).*", degoogle),
+            (r".*/local_url\?.*&q=([^&]*).*", degoogle),
+            (r".*/url\?.*&url=([^&]*).*", degoogle),
+            (r".*compose\?to=([^&]*).*", deyahoo),
+            (r"^mailto:([^?]*)(.*)", strip_mailto_proto, True),
+            (r"^file://(.*)", strip_file_proto),
+            (r'.+(https?%3a%2f%2f[^&]*)', debasic, True)]
+
+
+def fetch(url, method):
+    "return the new URL if fetching a given url gives a 30x status, otherwise None (indicating that it was not a redirect)"
+    ## print >>sys.stderr, "fetching", url
+    request = urllib.request.Request(url)
+    urlinfo = urllib.parse.urlparse(url)
+
+    # make a connection, to the default port if none
+    if request.type == 'http':
+        conn_class = http.client.HTTPConnection
+    else:
+        conn_class = http.client.HTTPSConnection
+    if urlinfo.port:
+        c = conn_class(request.origin_req_host, urlinfo.port)
+    else:
+        c = conn_class(request.origin_req_host)
+
+    # send the request and find out the HTTP result code
+    c.request(method, request.selector)
+    r = c.getresponse()
+    c.close()
+
+    if r.status != 200 and verbose:
+        print(r.status, method, url)
+
+    ## print >>sys.stderr, method, r.status, url, r.getheader('location'), r.getheader('uri')
+    if r.status == 200:
+        return None
+    elif 300 <= r.status < 400:
+        return r.getheader('location', r.getheader('uri'))
+    else:
+        raise urllib.error.HTTPError(url, r.status, r.reason, {}, None)
+
+
+def findit(url, method):
+    # emulate a do-while loop; stop and don't alter the result if fetch()
+    # returns None
+    try:
+        u = fetch(url, method)
+        while u:
+            url = u
+            u = fetch(u, method)
+            ## print >>sys.stderr, "got", u
+    except urllib.error.HTTPError as e:
+        # check for request method errors vs. normal ones
+        if method != 'GET' and e.code in (501,):
+            # recursively call this function, switching the method to GET
+            # for the URL that caused a fetch error, and resulting URL chain
+            # (501 is "unsupported method" and 204 is "no content")
+            url = findit(u, 'GET')
+        else:
+            # normal errors mean "game over"
+            if 400 <= e.code < 500:
+                print("%s: %s (%s)" % (self, str(e), url), file=sys.stderr)
+                sys.exit(5)
+
+    return url
+
+
+def unwrap(url):
+    '''Match the url against a regex in DECODERS and run the corresponding
+       function to extract the inner URL.  Returns the original URL if no
+       regex was matched.'''
+    if debug > 0: print("unwrapping")
+    return_value = None
+    decode_iter = iter(DECODERS)
+    decoder = next(decode_iter)
+    try:
+        while not return_value:
+            assert len(decoder) >= 2
+
+            if debug > 0: print("trying", decoder[0])
+            if len(decoder) == 2:
+                m = re.match(decoder[0], url)
+            else:
+                m = re.match(decoder[0], url, re.IGNORECASE)
+            if debug > 0: print(m)
+            if m != None:
+                if debug > 0: print(decoder[0])
+                return_value = decoder[1](m);
+            decoder = next(decode_iter)
+    except StopIteration:
+        if not return_value:
+            # well it's not encoded then
+            return_value = url
+
+    return return_value
+
+
+## def read_urls(f):
+
+
+# *** MAINLINE ***
+if __name__ == '__main__':
+    paramstr = ""
+
+    # == Command-line parsing ==
+    # -- defaults --
+    alg = None
+    debug = 0
+    verbose = False
+
+    # -- option handling --
+    try:
+        optlist, args = getopt.getopt(sys.argv[1:], 'hnda:pv', ['help'])
+    except getopt.GetoptError as e:
+        print("%s: %s" % (self, str(e)), file=sys.stderr)
+        sys.exit(1)
+
+    params = {}
+    for option, opt_arg in optlist:
+        if option == "-n":
+            params["no_fetch"] = True
+        elif option == "-p":
+            alg = passthru       # don't try to decode the URL
+        elif option == "-a":
+            alg = locals()[opt_arg]
+        elif option == "-v" or option == "--verbose":
+            verbose = True
+        elif option == "-d":
+            debug += 1
+        elif option == "-h" or option == "--help":
+            # TO-DO
+            print("Usage: urlresolve [ -n ] [ -d ] [ -a <alg> ] [ <url> ... ]")
+            exit
+
+    # -- argument handling --
+    if len(args) == 0:
+        urls = sys.stdin.readlines()
+    else:
+        urls = []
+        for name in args:
+            if name == "-":
+                urls += sys.stdin.readlines()
+            else:
+                urls.append(name)
+
+    # == processing ==
+    for encoded_url in urls:
+        # if it has no method (e.g. http: or file:), default to http://
+        if not (re.match("[a-z]+:", encoded_url) or re.match("http%3a%2f%2f", encoded_url)):
+            encoded_url = "http://" + encoded_url
+        if debug > 0: print("investigating", encoded_url)
+
+        if alg:
+            if debug > 0: print(alg)
+            url = alg(encoded_url)
+        else:
+            # no algorithm specified, so detect based on regex match how to unwrap it
+            url = unwrap(encoded_url)
+        if verbose:
+            print(f'[{url}]')
+
+        # only find http(s) URLs, unless we were told not to
+        if not params.get("no_fetch") and re.match("^http", url):
+            # then assume it's been shortened, so find the expanded version
+            url = findit(url, DEFAULT_METHOD)
+
+        # print the last-known-good URL
+        print(url)
