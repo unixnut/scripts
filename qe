@@ -1,0 +1,260 @@
+#! /bin/sh
+# qe (Bourne shell script) -- Quick extract
+
+
+# *** DEFINITIONS ***
+SELF=qe
+
+
+# *** FUNCTIONS ***
+# Sets $extension_glob; $extract and $list
+determine_file_type()
+{
+  case "$1" in
+    *.tar|*.tgz|*.tbz|*.txz)   extension_glob='.???' ; extract=extract_tar ; list=list_tar  ;;
+    *.tar.*)                   extension_glob=.tar.\* ; extract=extract_tar ; list=list_tar  ;;
+    *.zip)                     extension_glob=.zip ; extract=extract_zip ; list=list_zip  ;;
+    *) echo "$SELF: ERROR: Unknown file type" >&2
+       exit 1
+       ;;
+  esac
+}
+
+
+#*
+# If there is a unique toplevel within the archive, output that, otherwise
+# derived a subdirectory name from the name of the archive.
+#
+# @param 1: archive filename.
+#
+# Expects archive listing on input.
+#
+# @return 1 if the subdirectory is to be created explicitly, or 0 if not.
+# (The first case counts as an exceptional condition as extra action needs to
+# be taken in some cases.)
+calculate_subdir()
+{
+  local subdir basename=${1##*/}
+
+  # Check input for a unique toplevel
+  subdir=$(awk '{ oldprefix = prefix;
+                  count = split($0, a, /\//);
+                  ## if (count >= 2) ...
+                  prefix = a[1];
+                  if (NR >= 2 && !changed)
+                    changed = (prefix != oldprefix);
+                }
+                END { if (!changed) print prefix; }')
+
+  if [ -z "$subdir" ] ; then
+    # No unique toplevel within the archive, so fall back to stripping
+    # extension off the basename of the archive filename and using that
+    # (this subdirectory will have to be created because some archivers won't
+    # do it automatically)
+    echo "${basename%$extension_glob}"
+    return 1
+  else
+    echo "$subdir"
+  fi
+}
+
+
+extract_zip()
+{
+  if [ -n "$1" ] ; then
+    unzip $([ $verbose -eq 0 ] && printf %s -q) -d "$1" "$2"
+  else
+    unzip $([ $verbose -eq 0 ] && printf %s -q) "$2"
+  fi
+}
+
+
+# Warning: tarballs usually contain a "." entry.  If extracting an archive
+# containing a unique toplevel, warnings can occur, e.g.
+#   ": .: Cannot utime: Operation not permitted"
+extract_tar()
+{
+  if [ -n "$1" ] ; then
+    if [ ! -d "$1" ] ; then
+      mkdir "$1"
+    fi
+    tar x$([ $verbose -ge 2 ] && printf %s v)f "$2" -C "$1"
+  else
+    tar x$([ $verbose -ge 2 ] && printf %s v)f "$2"
+  fi
+}
+
+
+extract_cpio()
+{
+  :
+}
+
+
+# List a zip file, removing the headers and footers
+list_zip()
+{
+  unzip -l "$file" |
+    awk 'process && /^---------/ { process = 0; }
+         process == 1 { filename = substr($0, pos); print filename; }
+         process != 1 { if (match($0, /^-+ + -+ -+ +/))
+                        {
+                          pos = RLENGTH+1; process = 1;
+                        }
+                      }'
+}
+
+
+list_tar()
+{
+  tar tf "$file" |
+    awk '!/^\.?\/$/ { filename = $0;
+                      sub(/^\.\//, "", filename);
+                      print filename;
+                    }'
+}
+
+
+list_cpio()
+{
+  :
+}
+
+
+
+# *** MAINLINE ***
+verbose=0
+if [ "$1" = -l ] ; then
+  list_mode=y
+  shift
+fi
+
+# This will be be created if it doesn't exist; archive contents are extracted here
+# (unzip(1) semantics)
+# --dest
+if [ "$1" = -d ] ; then
+  if [ -n "$list_mode" ] ; then
+    echo "$SELF: ERROR: Incompatible options supplied" >&2
+    exit 1
+  fi
+
+  if [ -n "$2" ] ; then
+    extraction_dir=$2
+  else
+    echo "$SELF: ERROR: Option argument missing" >&2
+    exit 1
+  fi
+  shift ; shift
+fi
+
+# This must exist; subdirectory based on archive name or unique toplevel is
+# created
+if [ "$1" = -C ] ; then
+  if [ -n "$extraction_dir" -o -n "$list_mode" ] ; then
+    echo "$SELF: ERROR: Incompatible options supplied" >&2
+    exit 1
+  fi
+
+  if [ -n "$2" ] ; then
+    parent_dir=$2
+    if [ ! -d "$parent_dir" ] ; then
+      echo "$SELF: ERROR: Target directory '$parent_dir' does not exist" >&2
+      exit 2
+    fi
+  else
+    echo "$SELF: ERROR: Option argument missing" >&2
+    exit 1
+  fi
+  shift ; shift
+fi
+
+set -e
+
+if [ $# -eq 0 -o "$1" = - ] ; then
+  # Reading standard input
+  if [ -t 0 ] ; then
+    echo "$SELF: ERROR: Cannot read standard input from a terminal" >&2
+    exit 1
+  fi
+
+  # FIXME
+  # type file and/or save as temporary file
+  ...
+else
+  for file
+  do
+    determine_file_type "$file"
+
+    if [ "$list_mode" = y ] ; then
+      $list "$file"
+    else
+      # Set $extraction_root and $child_dir (the latter includes the unique
+      # toplevel subdirectory within the archive, if any)
+
+      create_extraction_root=y
+
+      # Determine unique toplevel
+      if [ -z "$extraction_dir" -a -z "$parent_dir" ] ; then
+        # Current directory; a single subdirectory will be created during extraction
+        if child_dir="$($list "$file" | calculate_subdir "$file")"
+        then
+          # The archive contains a unique toplevel subdir
+          create_extraction_root=n
+          extraction_root=
+        else
+          extraction_root="$child_dir"
+        fi
+      elif [ -n "$parent_dir" ] ; then
+        # Specified target directory; a single subdirectory will be created during extraction
+        if child_dir="$parent_dir/$($list "$file" | calculate_subdir "$file")"
+        then
+          # The archive contains a unique toplevel subdir
+          create_extraction_root=n
+          extraction_root="$parent_dir"
+        else
+          extraction_root="$child_dir"
+        fi
+      else
+        # Extract into specific destination (create if missing) without doing
+        # anything special related to the archive filename or contents
+        extraction_root="$extraction_dir"
+      fi
+
+      # Sanity checking
+      # (Does not apply if -d used; all archives are deliberately being
+      # extracted into $extraction_dir)
+      if [ -z "$extraction_dir" ] ; then
+        # There's a different $file_dest per archive, therefore this directory
+        # already existing (and not empty) for any archive is a possible error condition
+        if [ -d "$child_dir" -a -s "$child_dir" -a "$overlapping_dests_ok" != y ] ; then
+          # TODO: Seek confirmation and bail out if not received
+          echo "$SELF: Warning: '$child_dir/' already exists for '$file'" >&2
+        fi
+      fi
+
+      # Extract
+      ## if [ ! -d "$child_dir" -a "$create_extraction_root" = y ] ; then
+      ##   echo "Creating $file_dest"
+      ## else
+      ##   echo "Using existing $file_dest"
+      ## fi
+      if [ $verbose -ge 1 ] ; then
+        if [ -z "$extraction_dir" ] ; then
+          echo "Extracting '$file' as '$child_dir'"
+        else
+          echo "Extracting '$file' into '$extraction_dir'"
+        fi
+      fi
+      if [ $verbose -ge 2 ] ; then
+        echo \* $extract "$extraction_root" "$file"
+      fi
+      $extract "$extraction_root" "$file"
+    fi
+  done
+fi
+
+
+# vim: set tabstop=2 shiftwidth=2 :
+# Local Variables:
+# tab-width: 2
+# end:
