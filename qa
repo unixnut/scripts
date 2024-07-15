@@ -1,0 +1,204 @@
+#! /bin/sh
+# qa (Bourne shell script) -- Quick archive
+
+# *** DEFINITIONS ***
+SELF=`basename "$0"`
+ALLOWED_OPTIONS=vhd:t:o:C:x:
+ALLOWED_LONG_OPTIONS=help,verbose,dir,type,output,parent
+
+
+# *** FUNCTIONS ***
+show_help()
+{
+  cat << EOT_HELP
+Usage: qa {-d <dir> -t {zip|tar|tar.gz|...} [-o <outdir>] | [-C <dir>] <archive>} <path>...
+
+Where
+  -d    Specifies a directory to archive; output file has same name with an extension
+  -t    type of archive file (for -d)
+  -o    directory of archive file (for -d); default is current directory
+  -C    directory to change into before archiving
+EOT_HELP
+}
+
+
+# Sets $$extract and $list
+determine_file_type()
+{
+  case "$1" in
+    *.a)                       create=create_a  ;;
+    *.arj)                     create=create_arj  ;;
+    *.tar|*.tgz|*.tbz|*.txz)   create=create_tar  ;;
+    *.tar.*)                   create=create_tar  ;;
+    ## *.lzma)                    create=create_lzma  ;;
+    *.zip)                     create=create_zip  ;;
+    *.jar|*.war|*.ear|*.xpi)   create=create_zip  ;;
+    *.deb|*.ipk)               create=create_deb  ;;
+    *.udeb|*.ddeb)             create=create_deb  ;;
+    *.egg)                     create=create_egg  ;;
+    *.iso|*.bin|*.raw)         create=create_iso  ;;
+    *.lha|*.lzh)               create=create_lha  ;;
+    ## *.lz)                      create=create_lz  ;;
+    ## *.gz)                      create=create_gz  ;;
+    ## *.lz4)                     create=create_lz4  ;;
+    ## *.xz)                      create=create_xz  ;;
+    *.rar|*.r[0-9][0-9])       create=create_rar  ;;
+    *.rpm)                     create=create_rpm  ;;
+    *.whl)                     create=create_whl  ;;
+    *.7z)                      create=create_7z  ;;
+    *.zoo)                     create=create_zoo  ;;
+    *) echo "$SELF: ERROR: Unknown file type" >&2
+       exit 1
+       ;;
+  esac
+}
+
+
+# You see a ruin off in the distance
+create_blah()
+{
+  local dir="$1"
+  shift
+
+  if [ -n "$dir" ] ; then
+    (cd "$dir" ; 7z a -r "$@")
+  else
+    7z a -r "$@"
+  fi
+}
+
+
+create_7z()
+{
+  7z a -r "$@"
+}
+
+create_zip()
+{
+  shift
+  rm -f "$archive_filename"
+  set -o noglob
+  if [ $# -gt 0 ] ; then
+    [ $verbose -ge 2 ] && echo "* zip -r \"$archive_filename\" $@" $exclude
+    zip -r "$archive_filename" "$@" $exclude
+  else
+    [ $verbose -ge 2 ] && echo "* zip -r \"$archive_filename\" ." $exclude
+    zip -r "$archive_filename" . $exclude
+  fi
+}
+
+
+# *** MAINLINE ***
+# == command-line parsing ==
+# -- defaults --
+debug=0
+verbose=0
+
+# -- option handling --
+set -e
+orthogonal_opts=$(getopt --shell=sh --name=$SELF \
+  --options=+$ALLOWED_OPTIONS --longoptions=$ALLOWED_LONG_OPTIONS -- "$@")
+eval set -- "$orthogonal_opts"
+set +e      # getopt would have already reported the error
+
+while [ x"$1" != x-- ] ; do
+  case "$1" in
+    -v|--verbose) verbose=$((verbose + 1)) ;;
+    -h|--help) show_help ; exit ;;
+    -d|--dir)
+        mode=pick
+        source_dir=$2
+        shift
+        ;;
+    -C|--source)
+        source_dir=$2
+        shift
+        ;;
+    -o|--output)
+        echo "$SELF: ERROR: -d currently " >&2
+        output_dir=$2
+        shift
+        ;;
+    -t|--type)
+        archive_type=$2
+        shift
+        ;;
+    -x|--exclude)
+        exclude="$exclude -x $2"
+        shift
+        ;;
+    -1) echo "${SELF}: Warning: Blah blah blah feature unsupported" >&2 ;;
+  esac
+  shift     # get rid of option (or if the inner shift already did, get rid of arg)
+done
+shift       # get rid of the "--"
+
+# -- argument checking --
+## if [ $# != 2 -a $# != 3 ] ; then
+##   ## echo "Usage: $SELF ..." >&2
+##   show_help >&2
+##   exit 1
+## fi
+
+# -- argument handling --
+
+
+# == sanity checking ==
+if [ -n "$archive_type" -o -n "$output_dir" ] ; then
+  if [ "$mode" != pick ] ; then
+    echo "$SELF: ERROR: Incompatible options supplied" >&2
+    exit 1
+  fi
+fi
+
+
+# == preparation ==
+if [ "$mode" = pick ] ; then
+  # More sanity checking
+  if [ -z "$source_dir" ] ; then
+    echo "$SELF: ERROR: --dir option missing" >&2
+    exit 1
+  fi
+  if [ -z "$archive_type" ] ; then
+    echo "$SELF: ERROR: --type option missing" >&2
+    exit 1
+  fi
+
+  # Last component of $source_dir is used as the basename of the archive file
+  archive_filename=$(realpath "${output_dir+$output_dir/}${source_dir##*/}.$archive_type")
+  determine_file_type foo.$archive_type
+
+  # File sanity checking
+  if [ -f "$archive_filename" ] ; then
+    if [ "$force" != y ] ; then
+      read -p "Archive '$archive_filename' already exists; overwrite? [y/N]: " overwrite_answer
+      if [ "$overwrite_answer" != y ] ; then
+        exit
+      fi
+    fi
+  fi
+else
+  if [ -z "$1" ] ; then
+    echo "$SELF: ERROR: archive filename missing" >&2
+    exit 1
+  fi
+
+  archive_filename=$(realpath "$1")
+  shift
+  determine_file_type "$archive_filename"
+fi
+
+
+# == processing ==
+if [ -n "$source_dir" ] ; then
+  cd "$source_dir"
+fi
+
+$create "$archive_filename" "$@"
+
+exit
+...
+
+cd Projects/Data\ deserialising/src; zip ../../../Sent/blah.zip -r * -x \*\*/.\*.sw\?
+zip -R \*
+vs. zip -r .
