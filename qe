@@ -4,16 +4,75 @@
 
 # *** DEFINITIONS ***
 SELF=qe
+ALLOWED_OPTIONS=vhld:C:o
+ALLOWED_LONG_OPTIONS=help,verbose,list,dest,target,overlap
 
 
 # *** FUNCTIONS ***
+show_help()
+{
+  cat << EOT_HELP
+Usage: qe {-d <dir> | [-C <dir>]} <archive>...
+
+Where
+  -d    Specifies a directory to extract archive into
+  -C    Directory to change into before extracting; a subdirectory is created
+
+When using -C, if the archive contains a single subdirectory, it will be the
+one that is created.  Otherwise the created subdirectory will have the name of
+the archive without the extension.
+
+Note that unlike some tools, this one is designed to extract multiple archives
+and so does NOT take an optional [<path>...] argument specifying files to
+extract.
+EOT_HELP
+}
+
+
+set_mode()
+{
+  if [ -n "$mode" ] ; then
+    echo "$SELF: ERROR: Incompatible options supplied" >&2
+    exit 1
+  fi
+  mode=$1
+}
+
+
+# Deliberately fail if there is more than one path segment missing
+make_dir()
+{
+  if [ ! -d "$1" ] ; then
+    mkdir "$1"
+  fi
+}
+
+
 # Sets $extension_glob; $extract and $list
 determine_file_type()
 {
   case "$1" in
+    *.a)                       extension_glob=.a ; extract=extract_a ; list=list_a  ;;
+    *.arj)                     extension_glob=.arj ; extract=extract_arj ; list=list_arj  ;;
     *.tar|*.tgz|*.tbz|*.txz)   extension_glob='.???' ; extract=extract_tar ; list=list_tar  ;;
     *.tar.*)                   extension_glob=.tar.\* ; extract=extract_tar ; list=list_tar  ;;
+    ## *.lzma)                    extension_glob=.lzma ; extract=extract_lzma ; list=list_lzma  ;;
     *.zip)                     extension_glob=.zip ; extract=extract_zip ; list=list_zip  ;;
+    *.jar|*.war|*.ear|*.xpi)   extension_glob='.???' ; extract=extract_zip ; list=list_zip  ;;
+    *.deb|*.ipk)               extension_glob='.???' ; extract=extract_deb ; list=list_deb  ;;
+    *.udeb|*.ddeb)             extension_glob='.????' ; extract=extract_deb ; list=list_deb  ;;
+    *.egg)                     extension_glob=.egg ; extract=extract_egg ; list=list_egg  ;;
+    *.iso|*.bin|*.raw)         extension_glob='.???' ; extract=extract_iso ; list=list_iso  ;;
+    *.lha|*.lzh)               extension_glob=.lha ; extract=extract_lha ; list=list_lha  ;;
+    ## *.lz)                      extension_glob=.lz ; extract=extract_lz ; list=list_lz  ;;
+    ## *.gz)                      extension_glob=.gz ; extract=extract_gz ; list=list_gz  ;;
+    ## *.lz4)                     extension_glob=.lz4 ; extract=extract_lz4 ; list=list_lz4  ;;
+    ## *.xz)                      extension_glob=.xz ; extract=extract_xz ; list=list_xz  ;;
+    *.rar|*.r[0-9][0-9])       extension_glob='.???' ; extract=extract_rar ; list=list_rar  ;;
+    *.rpm)                     extension_glob=.rpm ; extract=extract_rpm ; list=list_rpm  ;;
+    *.whl)                     extension_glob=.whl ; extract=extract_whl ; list=list_whl  ;;
+    *.7z)                      extension_glob=.7z ; extract=extract_7z ; list=list_7z  ;;
+    *.zoo)                     extension_glob=.zoo ; extract=extract_zoo ; list=list_zoo  ;;
     *) echo "$SELF: ERROR: Unknown file type" >&2
        exit 1
        ;;
@@ -75,9 +134,7 @@ extract_zip()
 extract_tar()
 {
   if [ -n "$1" ] ; then
-    if [ ! -d "$1" ] ; then
-      mkdir "$1"
-    fi
+    make_dir "$1"
     tar x$([ $verbose -ge 2 ] && printf %s v)f "$2" -C "$1"
   else
     tar x$([ $verbose -ge 2 ] && printf %s v)f "$2"
@@ -91,10 +148,18 @@ extract_cpio()
 }
 
 
+# Primitive extraction of one file named $child_dir (borrow extension-removal
+# functionality)
+extract_lz4()
+{
+  lz4 -d "$1" $extraction_root/$child_dir
+}
+
+
 # List a zip file, removing the headers and footers
 list_zip()
 {
-  unzip -l "$file" |
+  unzip -l "$1" |
     awk 'process && /^---------/ { process = 0; }
          process == 1 { filename = substr($0, pos); print filename; }
          process != 1 { if (match($0, /^-+ + -+ -+ +/))
@@ -107,11 +172,17 @@ list_zip()
 
 list_tar()
 {
-  tar tf "$file" |
+  tar tf "$1" |
     awk '!/^\.?\/$/ { filename = $0;
                       sub(/^\.\//, "", filename);
                       print filename;
                     }'
+}
+
+
+list_lz4()
+{
+  lz4 -dc "$1"
 }
 
 
@@ -121,55 +192,175 @@ list_cpio()
 }
 
 
+list_a()
+{
+  ar tv "$1"
+}
+
+
+list_arj()
+{
+  unarj l "$1"
+}
+
+
+list_deb()
+{
+  dpkg-deb --contents "$1"
+}
+
+
+list_egg()
+{
+  unzip -p "$1" EGG-INFO/PKG-INFO | \
+    sed '/^Description:/,/^\S/{/^Description:/d; /^\S/b; d}'
+  echo
+  unzip -v "$1"
+}
+
+
+list_iso()
+{
+  iso_list "$1"
+}
+
+
+list_lha()
+{
+  lha v "$1"
+}
+
+
+list_lz()
+{
+  if [ -x "`which lzip`" ]; then
+    lzip -dc "$1"
+  else
+    lunzip -dc "$1"
+  fi
+}
+
+
+list_rar()
+{
+  if [ -x "`which rar`" ]; then
+    rar v "$1"
+  else
+    unrar v "$1"
+  fi
+}
+
+
+list_rpm()
+{
+  rpm -q -i -p "$1"
+  echo
+  echo '*** Contents:'
+  rpm -q -l -p "$1"
+}
+
+
+list_whl()
+{
+  unzip -p "$1" '*.dist-info/METADATA' | sed '/^$/q'
+  unzip -v "$1"
+}
+
+
+list_xz()
+{
+  xz --robot --list "$1"
+}
+
+
+list_7z()
+{
+  if [ -x "`which 7za`" ]; then
+    7za l "$1"
+  else
+    7zr l "$1"
+  fi |
+    awk '# end condition
+         process && /^-------------------/ { ++process; }
+         process == 1                      { filename = substr($0, pos); print filename; }
+         # Find the length of the first four separators on the line plus the spaces after each
+         process == 0                      { if (match($0, /^-+ +-+ +-+ +-+ +/))
+                                             {
+                                               pos = RLENGTH+1; ++process;
+                                             }
+                                           }'
+}
+
+
+list_zoo()
+{
+  if [ -x "`which zoo`" ]; then
+    zoo v "$1"
+  else
+    unzoo -l "$1"
+  fi
+}
+
+
 
 # *** MAINLINE ***
+# == command-line parsing ==
+# -- defaults --
 verbose=0
-if [ "$1" = -l ] ; then
-  list_mode=y
-  shift
-fi
 
-# This will be be created if it doesn't exist; archive contents are extracted here
-# (unzip(1) semantics)
-# --dest
-if [ "$1" = -d ] ; then
-  if [ -n "$list_mode" ] ; then
-    echo "$SELF: ERROR: Incompatible options supplied" >&2
-    exit 1
-  fi
-
-  if [ -n "$2" ] ; then
-    extraction_dir=$2
-  else
-    echo "$SELF: ERROR: Option argument missing" >&2
-    exit 1
-  fi
-  shift ; shift
-fi
-
-# This must exist; subdirectory based on archive name or unique toplevel is
-# created
-if [ "$1" = -C ] ; then
-  if [ -n "$extraction_dir" -o -n "$list_mode" ] ; then
-    echo "$SELF: ERROR: Incompatible options supplied" >&2
-    exit 1
-  fi
-
-  if [ -n "$2" ] ; then
-    parent_dir=$2
-    if [ ! -d "$parent_dir" ] ; then
-      echo "$SELF: ERROR: Target directory '$parent_dir' does not exist" >&2
-      exit 2
-    fi
-  else
-    echo "$SELF: ERROR: Option argument missing" >&2
-    exit 1
-  fi
-  shift ; shift
-fi
-
+# -- option handling --
 set -e
+orthogonal_opts=$(getopt --shell=sh --name=$SELF \
+  --options=+$ALLOWED_OPTIONS --longoptions=$ALLOWED_LONG_OPTIONS -- "$@")
+eval set -- "$orthogonal_opts"
+set +e      # getopt would have already reported the error
 
+while [ x"$1" != x-- ] ; do
+  case "$1" in
+    -l|--list) set_mode list ;;
+    -d|--dest)
+        # This will be be created if it doesn't exist; archive contents are extracted here
+        # (unzip(1) semantics)
+        set_mode direct ; extraction_dir=$2
+        shift
+        ;;
+    -C|--target)
+        # This must exist; subdirectory based on archive name or unique
+        # toplevel is created
+        set_mode target
+        parent_dir=$2
+        if [ ! -d "$parent_dir" ] ; then
+          echo "$SELF: ERROR: Target directory '$parent_dir' does not exist" >&2
+          exit 2
+        fi
+        shift
+        ;;
+    -o|--overlap) overlapping_dests_ok=y ;;
+    -v|--verbose) verbose=$((verbose + 1)) ;;
+    -h|--help) show_help ; exit ;;
+    -1) echo "${SELF}: Warning: Blah blah blah feature unsupported" >&2 ;;
+  esac
+  shift     # get rid of option (or if the inner shift already did, get rid of arg)
+done
+shift       # get rid of the "--"
+
+# -- argument checking --
+if [ $# -lt 1 ] ; then
+  ## echo "Usage: $SELF ..." >&2
+  show_help >&2
+  exit 1
+fi
+
+# -- argument handling --
+
+
+# == sanity checking ==
+
+
+# == preparation ==
+
+
+# == processing ==
 if [ $# -eq 0 -o "$1" = - ] ; then
   # Reading standard input
   if [ -t 0 ] ; then
@@ -181,11 +372,10 @@ if [ $# -eq 0 -o "$1" = - ] ; then
   # type file and/or save as temporary file
   ...
 else
-  for file
-  do
+  for file ; do
     determine_file_type "$file"
 
-    if [ "$list_mode" = y ] ; then
+    if [ "$mode" = list ] ; then
       $list "$file"
     else
       # Set $extraction_root and $child_dir (the latter includes the unique
@@ -193,8 +383,9 @@ else
 
       create_extraction_root=y
 
-      # Determine unique toplevel
+      # Determine unique toplevel ($extraction_root)
       if [ -z "$extraction_dir" -a -z "$parent_dir" ] ; then
+        # ($mode = <none>)
         # Current directory; a single subdirectory will be created during extraction
         if child_dir="$($list "$file" | calculate_subdir "$file")"
         then
@@ -205,6 +396,7 @@ else
           extraction_root="$child_dir"
         fi
       elif [ -n "$parent_dir" ] ; then
+        # ($mode = target)
         # Specified target directory; a single subdirectory will be created during extraction
         if child_dir="$parent_dir/$($list "$file" | calculate_subdir "$file")"
         then
@@ -215,6 +407,7 @@ else
           extraction_root="$child_dir"
         fi
       else
+        # ($mode = direct)
         # Extract into specific destination (create if missing) without doing
         # anything special related to the archive filename or contents
         extraction_root="$extraction_dir"
@@ -240,8 +433,10 @@ else
       ## fi
       if [ $verbose -ge 1 ] ; then
         if [ -z "$extraction_dir" ] ; then
+          # ($mode != direct)
           echo "Extracting '$file' as '$child_dir'"
         else
+          # ($mode = direct)
           echo "Extracting '$file' into '$extraction_dir'"
         fi
       fi
