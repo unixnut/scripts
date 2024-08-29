@@ -3,12 +3,18 @@
 
 BEGIN { FS=":" }
 
+/^BEGIN:VCARD/ { name = ""; fullname = ""; addr_qty = ""; delete phones; email = ""; }
 
-$1 ~ /^N\>/   {
+# Clean up DOS line endings
+/\r$/         { $0 = substr($0, 1, length($0) - 1); }
+
+## $1 ~ /^N\>/
+$1 == "N"     {
                 # parts =
                 name_qty = split($2, name_parts, /;/);
                 name = name_parts[1] ", " name_parts[2];
                 fullname = name_parts[2] " " name_parts[1]
+                ## print fullname
               }
 
 $1 ~ /^ADR/   {
@@ -20,12 +26,22 @@ $1 ~ /^ADR/   {
                   addr = parts[2] "  " parts[3]
               }
 
-$1 ~ /^TEL/   { phone = $2 }
+$1 ~ /^TEL/   {
+                pos = index($1, "=")
+                if (pos > 0)
+                  type = substr($1, pos + 1)
+                else
+                  type = "default"
+                phones[type] = $2
+              }
 
 $1 ~ /^EMAIL/ { email = $2 }
 
 END           {
-                print "\"" name "\",\"" phone "\",\"" addr "\",\"\""
+                phone_str = ""
+                for (type in phones) phone_str = phone_str "  " phones[type]
+                phone_str = substr(phone_str, 3)
+                printf("\"%s\",\"%s\",\"%s\",\"\"\n", name, phone_str, addr)
                 if (email)
                   print "alias " tolower(name_parts[2]) " " fullname " <" email ">"
               }
