@@ -1,7 +1,7 @@
 #! /bin/bash
 # md2pdf (BASH script) -- generates a PDF file with metadata and correct paper size
 #
-# Version: 1.0
+# Version: 1.1
 # Copyright: (c)2015 Alastair Irvine <alastair@plug.org.au>
 # Keywords: pdf pandoc tex latex markdown2pdf metadata title
 # Licence: This file is released under the GNU General Public License
@@ -146,7 +146,8 @@ fi
 
 
 # == processing ==
-markdown2pdf $geometry_options \
+pandoc $geometry_options \
   "${metadata_options[@]}" \
   --template="$(dirname "$0")/include/pdf_template.tex" \
-  "${passthru_options[@]}" "$@"
+  "${passthru_options[@]}" "$@" \
+  -o "${2-${1%.*}.pdf}"
