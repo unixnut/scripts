@@ -4,6 +4,7 @@
 
 # *** DEFINITIONS ***
 SELF=qe
+VERSION=0.3
 ALLOWED_OPTIONS=vhld:C:o
 ALLOWED_LONG_OPTIONS=help,verbose,list,dest,target,overlap
 
@@ -25,6 +26,8 @@ the archive without the extension.
 Note that unlike some tools, this one is designed to extract multiple archives
 and so does NOT take an optional [<path>...] argument specifying files to
 extract.
+
+Version $VERSION
 EOT_HELP
 }
 
@@ -43,6 +46,10 @@ set_mode()
 make_dir()
 {
   if [ ! -d "$1" ] ; then
+    if [ -e "$1" ] ; then
+      echo "$SELF: ERROR: Target '$1' exists and is not a directory" >&2
+      exit 3
+    fi
     mkdir "$1"
   fi
 }
@@ -54,9 +61,8 @@ determine_file_type()
   case "$1" in
     *.a)                       extension_glob=.a ; extract=extract_a ; list=list_a  ;;
     *.arj)                     extension_glob=.arj ; extract=extract_arj ; list=list_arj  ;;
-    *.tar|*.tgz|*.tbz|*.txz)   extension_glob='.???' ; extract=extract_tar ; list=list_tar  ;;
+    *.tar|*.tgz|*.tbz|*.txz|*.tdz|*.tlz)   extension_glob='.???' ; extract=extract_tar ; list=list_tar  ;;
     *.tar.*)                   extension_glob=.tar.\* ; extract=extract_tar ; list=list_tar  ;;
-    ## *.lzma)                    extension_glob=.lzma ; extract=extract_lzma ; list=list_lzma  ;;
     *.zip)                     extension_glob=.zip ; extract=extract_zip ; list=list_zip  ;;
     *.jar|*.war|*.ear|*.xpi)   extension_glob='.???' ; extract=extract_zip ; list=list_zip  ;;
     *.deb|*.ipk)               extension_glob='.???' ; extract=extract_deb ; list=list_deb  ;;
@@ -64,15 +70,40 @@ determine_file_type()
     *.egg)                     extension_glob=.egg ; extract=extract_egg ; list=list_egg  ;;
     *.iso|*.bin|*.raw)         extension_glob='.???' ; extract=extract_iso ; list=list_iso  ;;
     *.lha|*.lzh)               extension_glob=.lha ; extract=extract_lha ; list=list_lha  ;;
+    ## *.bz2)                     extension_glob=.bz2 ; extract=extract_bz2 ; list=list_bz2  ;;
     ## *.lz)                      extension_glob=.lz ; extract=extract_lz ; list=list_lz  ;;
+    ## *.lzo)                     extension_glob=.lzop ; extract=extract_lzop ; list=list_lzop  ;;
+    ## *.lzma)                    extension_glob=.lzma ; extract=extract_lzma ; list=list_lzma  ;;
     ## *.gz)                      extension_glob=.gz ; extract=extract_gz ; list=list_gz  ;;
-    ## *.lz4)                     extension_glob=.lz4 ; extract=extract_lz4 ; list=list_lz4  ;;
+    ## *.dz)                      extension_glob=.dz ; extract=extract_gz ; list=list_gz  ;;
+    *.lz4)                     extension_glob=.lz4 ; extract=extract_lz4 ; list=list_lz4  ;;
     ## *.xz)                      extension_glob=.xz ; extract=extract_xz ; list=list_xz  ;;
+    ## *.br)                      extension_glob=.br ; extract=extract_br ; list=list_br  ;;
+    ## *.zstd)                    extension_glob=.zstd ; extract=extract_zstd ; list=list_zstd  ;;
+    ## *.Z)                       extension_glob=.Z ; extract=extract_compress ; list=list_compress  ;;
+    ## *.lzfse)                   extension_glob=.lzfse ; extract=extract_lzfse ; list=list_lzfse  ;;
+    ## *.snappy)                  extension_glob=.snappy ; extract=extract_snappy ; list=list_snappy  ;;
     *.rar|*.r[0-9][0-9])       extension_glob='.???' ; extract=extract_rar ; list=list_rar  ;;
     *.rpm)                     extension_glob=.rpm ; extract=extract_rpm ; list=list_rpm  ;;
     *.whl)                     extension_glob=.whl ; extract=extract_whl ; list=list_whl  ;;
     *.7z)                      extension_glob=.7z ; extract=extract_7z ; list=list_7z  ;;
     *.zoo)                     extension_glob=.zoo ; extract=extract_zoo ; list=list_zoo  ;;
+    *.pax)                     extension_glob=.pax ; extract=extract_pax ; list=list_pax  ;;
+    *.ace)                     extension_glob=.ace ; extract=extract_generic ; list=list_generic  ;;
+    *.adf)                     extension_glob=.adf ; extract=extract_generic ; list=list_generic  ;;
+    *.apm)                     extension_glob=.apm ; extract=extract_generic ; list=list_generic  ;;
+    *.arc)                     extension_glob=.arc ; extract=extract_generic ; list=list_generic  ;;
+    *.cpio)                    extension_glob=.cpio ; extract=extract_cpio ; list=list_cpio  ;;
+    *.dmg)                     extension_glob=.dmg ; extract=extract_7z ; list=list_7z  ;;
+    *.dms)                     extension_glob=.dms ; extract=extract_generic ; list=list_generic  ;;
+    *.iso)                     extension_glob=.iso ; extract=extract_7z ; list=list_7z  ;;
+    *.lbr)                     extension_glob=.lbr ; extract=extract_generic ; list=list_generic  ;;
+    *.pak)                     extension_glob=.pak ; extract=extract_generic ; list=list_generic  ;;
+    *.pp)                      extension_glob=.pp ; extract=extract_generic ; list=list_generic  ;;
+    *.sit)                     extension_glob=.sit ; extract=extract_generic ; list=list_generic  ;;
+    *.sitx)                    extension_glob=.sitx ; extract=extract_generic ; list=list_generic  ;;
+    *.xar)                     extension_glob=.xar ; extract=extract_7z ; list=list_7z  ;;
+    *.zoo)                     extension_glob=.zoo ; extract=extract_generic ; list=list_generic  ;;
     *) echo "$SELF: ERROR: Unknown file type" >&2
        exit 1
        ;;
@@ -135,16 +166,29 @@ extract_tar()
 {
   if [ -n "$1" ] ; then
     make_dir "$1"
-    tar x$([ $verbose -ge 2 ] && printf %s v)f "$2" -C "$1"
+    tar x$([ $verbose -ge 1 ] && printf %s v)f "$2" -C "$1"
   else
-    tar x$([ $verbose -ge 2 ] && printf %s v)f "$2"
+    tar x$([ $verbose -ge 1 ] && printf %s v)f "$2"
   fi
 }
 
 
 extract_cpio()
 {
-  :
+  # --quiet suppresses messages and is orthogonal to --verbose, which shows file details
+  local cpio_opts="$([ $verbose -ge 1 ] && printf %s --verbose) --quiet\
+                   --unconditional --preserve-modification-time"
+
+  ## (cd tmp/berk ; find . ! -path . | cpio -o ) > ...   supports -L
+  if [ -n "$1" ] ; then
+    make_dir "$1"
+    # --make-directories works, but results in this message (regardless of
+    # whether "." is in archive):
+    #   cpio: <dest>: Cannot change mode to rwxr-xr-x: No such file or directory
+    cpio --extract --file "$2" $cpio_opts -D "$1"
+  else
+    cpio --extract --file "$2" $cpio_opts
+  fi
 }
 
 
@@ -154,6 +198,57 @@ extract_lz4()
 {
   lz4 -d "$1" $extraction_root/$child_dir
 }
+
+
+extract_7z()
+{
+  # Always overwrite
+  # -bb1 shows names of files extracted, prefixed with a hyphen and a space
+  # -bd turns off progress indicator
+  local opts="-bd $([ $verbose -ge 1 ] && printf %s -bb1) -aoa"
+  local prog=7z
+
+  if [ -x "`which 7z`" ]; then
+    :
+  elif [ -x "`which 7za`" ]; then
+    prog=7za
+  elif [ -x "`which 7zr`" ]; then
+    prog=7zr
+  fi
+
+  if [ -n "$1" ] ; then
+    ## make_dir "$1"
+    $prog x $opts -o"$1" "$2"
+  else
+    $prog x $opts "$2"
+  fi |
+    sed -n 's/^- //p'
+}
+
+
+## extract_a()
+## extract_arj()
+## extract_br()
+## extract_bz2()
+## extract_compress()
+## extract_deb()
+## extract_egg()
+## extract_generic()
+## extract_gz()
+## extract_iso()
+## extract_lha()
+## extract_lz()
+## extract_lzfse()
+## extract_lzma()
+## extract_lzop()
+## extract_pax()
+## extract_rar()
+## extract_rpm()
+## extract_snappy()
+## extract_whl()
+## extract_xz()
+## extract_zoo()
+## extract_zstd()
 
 
 # List a zip file, removing the headers and footers
@@ -188,7 +283,9 @@ list_lz4()
 
 list_cpio()
 {
-  :
+  # --quiet suppresses messages and is orthogonal to --verbose, which shows file details
+  cpio --list $([ $verbose -ge 1 ] && printf %s --verbose) --quiet --file "$1" |
+    grep -v '^\.$'
 }
 
 
@@ -275,7 +372,9 @@ list_xz()
 
 list_7z()
 {
-  if [ -x "`which 7za`" ]; then
+  if [ -x "`which 7z`" ]; then
+    7z l "$1"
+  elif [ -x "`which 7za`" ]; then
     7za l "$1"
   else
     7zr l "$1"
@@ -294,12 +393,26 @@ list_7z()
 
 list_zoo()
 {
+  # Not available under Debian
   if [ -x "`which zoo`" ]; then
     zoo v "$1"
   else
     unzoo -l "$1"
   fi
 }
+
+
+## list_br()
+## list_bz2()
+## list_compress()
+## list_generic()
+## list_gz()
+## list_lzfse()
+## list_lzma()
+## list_lzop()
+## list_pax()
+## list_snappy()
+## list_zstd()
 
 
 
