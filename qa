@@ -73,6 +73,15 @@ create_7z()
   7z a -r "$@"
 }
 
+
+create_tar()
+{
+  local tar_args
+
+  # in v1.34, -a / --auto-compress doesn't work.
+}
+
+
 create_zip()
 {
   shift

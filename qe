@@ -69,7 +69,8 @@ determine_file_type()
     *.udeb|*.ddeb)             extension_glob='.????' ; extract=extract_deb ; list=list_deb  ;;
     *.egg)                     extension_glob=.egg ; extract=extract_egg ; list=list_egg  ;;
     *.iso|*.bin|*.raw)         extension_glob='.???' ; extract=extract_iso ; list=list_iso  ;;
-    *.lha|*.lzh)               extension_glob=.lha ; extract=extract_lha ; list=list_lha  ;;
+    *.wim)                     extension_glob=.wim ; extract=extract_7z ; list=list_z7  ;;
+    *.lha|*.lzh|.lzs|.pma)     extension_glob='.???' ; extract=extract_lhz ; list=list_lhz  ;;
     ## *.bz2)                     extension_glob=.bz2 ; extract=extract_bz2 ; list=list_bz2  ;;
     ## *.lz)                      extension_glob=.lz ; extract=extract_lz ; list=list_lz  ;;
     ## *.lzo)                     extension_glob=.lzop ; extract=extract_lzop ; list=list_lzop  ;;
@@ -83,25 +84,24 @@ determine_file_type()
     ## *.Z)                       extension_glob=.Z ; extract=extract_compress ; list=list_compress  ;;
     ## *.lzfse)                   extension_glob=.lzfse ; extract=extract_lzfse ; list=list_lzfse  ;;
     ## *.snappy)                  extension_glob=.snappy ; extract=extract_snappy ; list=list_snappy  ;;
-    *.rar|*.r[0-9][0-9])       extension_glob='.???' ; extract=extract_rar ; list=list_rar  ;;
     *.rpm)                     extension_glob=.rpm ; extract=extract_rpm ; list=list_rpm  ;;
     *.whl)                     extension_glob=.whl ; extract=extract_whl ; list=list_whl  ;;
-    *.7z)                      extension_glob=.7z ; extract=extract_7z ; list=list_7z  ;;
-    *.zoo)                     extension_glob=.zoo ; extract=extract_zoo ; list=list_zoo  ;;
-    *.pax)                     extension_glob=.pax ; extract=extract_pax ; list=list_pax  ;;
-    *.ace)                     extension_glob=.ace ; extract=extract_generic ; list=list_generic  ;;
-    *.adf)                     extension_glob=.adf ; extract=extract_generic ; list=list_generic  ;;
-    *.apm)                     extension_glob=.apm ; extract=extract_generic ; list=list_generic  ;;
-    *.arc)                     extension_glob=.arc ; extract=extract_generic ; list=list_generic  ;;
+    *.cab)                     extension_glob=.cab ; extract=extract_generic ; list=list_generic  ;;
+    *.7z)                      extension_glob=.7z ; extract=extract_generic ; list=list_generic  ;;  ## extract=extract_7z ; list=list_7z  ;;
+    *.ace)                     extension_glob=.ace ; extract=extract_unar ; list=list_unar  ;;
+    *.adf)                     extension_glob=.adf ; extract=extract_unar ; list=list_unar  ;;
+    *.apm)                     extension_glob=.apm ; extract=extract_7z ; list=list_7z  ;;
+    *.arc)                     extension_glob=.arc ; extract=extract_unar ; list=list_unar  ;;
     *.cpio)                    extension_glob=.cpio ; extract=extract_cpio ; list=list_cpio  ;;
     *.dmg)                     extension_glob=.dmg ; extract=extract_7z ; list=list_7z  ;;
     *.dms)                     extension_glob=.dms ; extract=extract_generic ; list=list_generic  ;;
     *.iso)                     extension_glob=.iso ; extract=extract_7z ; list=list_7z  ;;
-    *.lbr)                     extension_glob=.lbr ; extract=extract_generic ; list=list_generic  ;;
-    *.pak)                     extension_glob=.pak ; extract=extract_generic ; list=list_generic  ;;
-    *.pp)                      extension_glob=.pp ; extract=extract_generic ; list=list_generic  ;;
-    *.sit)                     extension_glob=.sit ; extract=extract_generic ; list=list_generic  ;;
-    *.sitx)                    extension_glob=.sitx ; extract=extract_generic ; list=list_generic  ;;
+    *.lbr)                     extension_glob=.lbr ; extract=extract_unar ; list=list_unar  ;;
+    *.pak)                     extension_glob=.pak ; extract=extract_unar ; list=list_unar  ;;
+    *.pp)                      extension_glob=.pp ; extract=extract_unar ; list=list_unar  ;;
+    *.rar|*.r[0-9][0-9])       extension_glob='.???' ; extract=extract_rar ; list=list_rar  ;;
+    *.sit)                     extension_glob=.sit ; extract=extract_unar ; list=list_unar  ;;
+    *.sitx)                    extension_glob=.sitx ; extract=extract_unar ; list=list_unar  ;;
     *.xar)                     extension_glob=.xar ; extract=extract_7z ; list=list_7z  ;;
     *.zoo)                     extension_glob=.zoo ; extract=extract_generic ; list=list_generic  ;;
     *) echo "$SELF: ERROR: Unknown file type" >&2
@@ -149,6 +149,25 @@ calculate_subdir()
 }
 
 
+# -- Utilities --
+recognise_tar()
+{
+  case "$1" in
+    *.tar.br|tar.brotli)          printf %s "--use-compress-program=brotli"  ;;
+    *.tar.bz2|*.tbz2)             printf %s "--bzip2"  ;;
+    *.tar.gz|*.tgz|*.tdz)         printf %s "--gzip"  ;;
+    *.tar.lzma)                   printf %s "--lzma"  ;;
+    *.tar.lz|*.tar.lzip|*.tlz)    printf %s "--lzip"  ;;
+    *.tar.lz4)                    printf %s "--use-compress-program=lz4"  ;;
+    *.tar.lzo|tar.lzop)           printf %s "--lzop"  ;;
+    *.tar.xz|*.txz)               printf %s "--xz"  ;;
+    *.tar.zstd|*.tzst)            printf %s "--zstd"  ;;
+    *.tar.Z)                      printf %s -Z ;;
+  esac
+}
+
+
+# -- Archive Extraction --
 extract_zip()
 {
   if [ -n "$1" ] ; then
@@ -164,18 +183,20 @@ extract_zip()
 #   ": .: Cannot utime: Operation not permitted"
 extract_tar()
 {
+  local tar_opts=$(recognise_tar "$2")
+
   if [ -n "$1" ] ; then
     make_dir "$1"
-    tar x$([ $verbose -ge 1 ] && printf %s v)f "$2" -C "$1"
+    tar x$([ $verbose -ge 1 ] && printf %s v) $tar_opts -f "$2" -C "$1"
   else
-    tar x$([ $verbose -ge 1 ] && printf %s v)f "$2"
+    tar x$([ $verbose -ge 1 ] && printf %s v) $tar_opts -f "$2"
   fi
 }
 
 
 extract_cpio()
 {
-  # --quiet suppresses messages and is orthogonal to --verbose, which shows file details
+  # --quiet suppresses messages and is unrelated to --verbose, which shows file details
   local cpio_opts="$([ $verbose -ge 1 ] && printf %s --verbose) --quiet\
                    --unconditional --preserve-modification-time"
 
@@ -226,23 +247,132 @@ extract_7z()
 }
 
 
-## extract_a()
-## extract_arj()
+# Try unar and 7-Zip
+extract_generic()
+{
+  if [ -n "$1" ] ; then
+    make_dir "$1"
+  fi
+  if [ -x "`which 7z`" ]; then
+    # Always overwrite
+    # -bb1 shows names of files extracted, prefixed with a hyphen and a space
+    # -bd turns off progress indicator
+    local opts="-bd $([ $verbose -ge 1 ] && printf %s -bb1) -aoa"
+    7z x $opts -o"${1-.}" "$2"
+  else
+    unar -f $([ $verbose -eq 0 ] && printf %s -q) -o "${1-.}" "$2"
+  fi
+}
+
+
+extract_unar()
+{
+  unar -f $([ $verbose -eq 0 ] && printf %s -q) -o "${1-.}" "$2"
+}
+
+
+extract_a()
+{
+  local archive_filename=$(realpath "$2")
+
+  if [ -n "$1" ] ; then
+    make_dir "$1"
+    cd "$1"
+  fi
+  ar xo$([ $verbose -ge 1 ] && printf %s v) "$archive_filename"
+}
+
+
+extract_arj()
+{
+  if [ -n "$1" ] ; then
+    make_dir "$1"
+  fi
+  if [ -x "`which arj`" ]; then
+    # -jyoc = Suppress queries assuming Yes for overwrite and create directory
+    case $verbose in
+      0) arj x -jyoc -ht"${1-.}" "$2" > /dev/null ;;
+      1) arj x -jyoc -ht"${1-.}" "$2" | sed -n -e 's/^Extracting \(.*\) *  to .*/\1/' -e 's/ \+$//p' ;;
+      *) arj x -jyoc  -jv -ht"${1-.}" "$2" ;;
+    esac
+  else
+    extract_generic "$@"
+  fi
+}
+
+
 ## extract_br()
 ## extract_bz2()
 ## extract_compress()
 ## extract_deb()
 ## extract_egg()
-## extract_generic()
 ## extract_gz()
-## extract_iso()
-## extract_lha()
+
+
+extract_iso()
+{
+  extract_7z "$@"
+}
+
+
+extract_lhz()
+{
+  if [ -x "`which lhasa`" ]; then
+    lhasa efq1w="${1-.}" "$2"
+  else
+    extract_generic "$@"
+  fi
+}
+
+
 ## extract_lz()
 ## extract_lzfse()
 ## extract_lzma()
 ## extract_lzop()
-## extract_pax()
-## extract_rar()
+
+
+# Not an archive format; see pax(1)
+extract_pax()
+{
+  local archive_filename=$(realpath "$2")
+
+  if [ -n "$1" ] ; then
+    make_dir "$1"
+    cd "$1"
+  fi
+  pax -r -f "$archive_filename"
+}
+
+
+extract_rar()
+{
+  local archive_filename=$(realpath "$2") cmd
+
+  if [ -x "`which rar`" ]; then
+    cmd=rar
+  elif [ -x "`which unrar`" ]; then
+    cmd=unrar
+  fi
+
+  if [ -n "$cmd" ] ; then
+    if [ -n "$1" ] ; then
+      make_dir "$1"
+      cd "$1"
+    fi
+    # -o+ = Overwrite existing files
+    if [ $verbose -ge 1 ] ; then
+      # Removed backspace characters and progress indicators, then action descriptions
+      $cmd x -o+ "$archive_filename" |
+        sed -n -e 's/ *\x08.*//' -e 's/^Extracting  //p'
+    else
+      $cmd x -o+ "$archive_filename" > /dev/null
+    fi
+  else
+    extract_generic "$@"
+  fi
+}
+
+
 ## extract_rpm()
 ## extract_snappy()
 ## extract_whl()
@@ -251,27 +381,38 @@ extract_7z()
 ## extract_zstd()
 
 
+# -- Archive Listing --
 # List a zip file, removing the headers and footers
 list_zip()
 {
-  unzip -l "$1" |
-    awk 'process && /^---------/ { process = 0; }
-         process == 1 { filename = substr($0, pos); print filename; }
-         process != 1 { if (match($0, /^-+ + -+ -+ +/))
-                        {
-                          pos = RLENGTH+1; process = 1;
-                        }
-                      }'
+  if [ $verbose -ge 1 ] ; then
+    unzip -l "$1"
+  else
+    unzip -l "$1" |
+      awk 'process && /^---------/ { process = 0; }
+          process == 1 { filename = substr($0, pos); print filename; }
+          process != 1 { if (match($0, /^-+ + -+ -+ +/))
+                          {
+                            pos = RLENGTH+1; process = 1;
+                          }
+                        }'
+  fi
 }
 
 
 list_tar()
 {
-  tar tf "$1" |
-    awk '!/^\.?\/$/ { filename = $0;
-                      sub(/^\.\//, "", filename);
-                      print filename;
-                    }'
+  local tar_opts=$(recognise_tar "$1")
+
+  if [ $verbose -ge 1 ] ; then
+    tar tv $tar_opts -f "$1"
+  else
+    tar t $tar_opts -f "$1" |
+      awk '!/^\.?\/$/ { filename = $0;
+                        sub(/^\.\//, "", filename);
+                        print filename;
+                      }'
+  fi
 }
 
 
@@ -291,13 +432,25 @@ list_cpio()
 
 list_a()
 {
-  ar tv "$1"
+  ar t$([ $verbose -ge 1 ] && printf %s v) "$1"
 }
 
 
 list_arj()
 {
-  unarj l "$1"
+  if [ -x "`which arj`" ]; then
+    if [ $verbose -ge 1 ] ; then
+      # Note: elides pathnames
+      arj l "$1"
+    else
+      # Get full pathnames by looking for numbered output e.g. "002) test/foo.txt"
+      # and show them but no other detail
+      arj v "$1" |
+        sed -n 's/^[0-9]\+) //p'
+    fi
+  else
+    list_generic "$@"
+  fi
 }
 
 
@@ -322,9 +475,13 @@ list_iso()
 }
 
 
-list_lha()
+list_lhz()
 {
-  lha v "$1"
+  if [ $verbose -ge 1 ] ; then
+    lhasa v "$1"
+  else
+    lhasa l "$1"
+  fi
 }
 
 
@@ -340,11 +497,36 @@ list_lz()
 
 list_rar()
 {
+  local cmd
+
   if [ -x "`which rar`" ]; then
-    rar v "$1"
-  else
-    unrar v "$1"
+    cmd=rar
+  elif [ -x "`which unrar`" ]; then
+    cmd=unrar
   fi
+
+  if [ -n "$cmd" ] ; then
+    if [ $verbose -ge 1 ] ; then
+      $cmd v "$1"
+    else
+      $cmd l "$1" | strip_rar
+    fi
+  else
+    list_generic "$1"
+  fi
+}
+
+
+strip_rar()
+{
+  awk 'process && /^-----------/ { ++process; }
+       process == 1 { filename = substr($0, pos); print filename; }
+       # Find the length of the first four separators on the line plus the spaces after each
+       process == 0 { if (match($0, /^-+ -+  -+ -+ + /))
+                      {
+                        pos = RLENGTH+1; ++process;
+                      }
+                    }'
 }
 
 
@@ -410,7 +592,6 @@ list_zoo()
 ## list_lzfse()
 ## list_lzma()
 ## list_lzop()
-## list_pax()
 ## list_snappy()
 ## list_zstd()
 
