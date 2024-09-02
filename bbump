@@ -154,4 +154,8 @@ else
   cp -pi $old_file $new_file
 fi
 
-ln -s --force $new_file $DIR/backup.meta
+if [ -L $DIR/backup.meta ] ; then
+  rm -f $DIR/backup.prev.meta
+  mv $DIR/backup.meta $DIR/backup.prev.meta
+fi
+ln -s --force ${new_file##*/} $DIR/backup.meta
