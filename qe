@@ -61,7 +61,7 @@ determine_file_type()
   case "$1" in
     *.a)                       extension_glob=.a ; extract=extract_a ; list=list_a  ;;
     *.arj)                     extension_glob=.arj ; extract=extract_arj ; list=list_arj  ;;
-    *.tar|*.tgz|*.tbz|*.txz|*.tdz|*.tlz)   extension_glob='.???' ; extract=extract_tar ; list=list_tar  ;;
+    *.tar|*.tgz|*.tbz|*.tbz2|*.txz|*.tdz|*.tlz|*.tzst)   extension_glob='.???' ; extract=extract_tar ; list=list_tar  ;;
     *.tar.*)                   extension_glob=.tar.\* ; extract=extract_tar ; list=list_tar  ;;
     *.zip)                     extension_glob=.zip ; extract=extract_zip ; list=list_zip  ;;
     *.jar|*.war|*.ear|*.xpi)   extension_glob='.???' ; extract=extract_zip ; list=list_zip  ;;
@@ -154,7 +154,7 @@ recognise_tar()
 {
   case "$1" in
     *.tar.br|tar.brotli)          printf %s "--use-compress-program=brotli"  ;;
-    *.tar.bz2|*.tbz2)             printf %s "--bzip2"  ;;
+    *.tar.bz2|*.tbz2|*.tbz)       printf %s "--bzip2"  ;;
     *.tar.gz|*.tgz|*.tdz)         printf %s "--gzip"  ;;
     *.tar.lzma)                   printf %s "--lzma"  ;;
     *.tar.lz|*.tar.lzip|*.tlz)    printf %s "--lzip"  ;;
@@ -200,7 +200,6 @@ extract_cpio()
   local cpio_opts="$([ $verbose -ge 1 ] && printf %s --verbose) --quiet\
                    --unconditional --preserve-modification-time"
 
-  ## (cd tmp/berk ; find . ! -path . | cpio -o ) > ...   supports -L
   if [ -n "$1" ] ; then
     make_dir "$1"
     # --make-directories works, but results in this message (regardless of
@@ -570,6 +569,19 @@ list_7z()
                                                pos = RLENGTH+1; ++process;
                                              }
                                            }'
+}
+
+
+list_generic()
+{
+  if [ -x "`which lsar`" ]; then
+    # Remove first line describing archive filename and type
+    # but leave error message like "asdflaksdjf: Couldn't open archive. (Opening file failed.)"
+    lsar $([ $verbose -ge 1 ] && printf %s -l) "$@" |
+      sed '1 { /\.)$/ !d ; }'
+  else
+    list_7z "$@"
+  fi
 }
 
 

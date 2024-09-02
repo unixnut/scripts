@@ -26,27 +26,28 @@ EOT_HELP
 determine_file_type()
 {
   case "$1" in
-    *.a)                       create=create_a  ;;
+    *.a)                       create=create_a  ;;    # Use a Makefile
     *.arj)                     create=create_arj  ;;
-    *.tar|*.tgz|*.tbz|*.txz)   create=create_tar  ;;
-    *.tar.*)                   create=create_tar  ;;
+    *.tar|*.tar.*)             create=create_tar  ;;
+    *.tgz|*.tbz|*.tbz2|*.tzst|*.txz|*.tdz|*.tlz)  create=create_tar  ;;
     ## *.lzma)                    create=create_lzma  ;;
     *.zip)                     create=create_zip  ;;
     *.jar|*.war|*.ear|*.xpi)   create=create_zip  ;;
-    *.deb|*.ipk)               create=create_deb  ;;
-    *.udeb|*.ddeb)             create=create_deb  ;;
-    *.egg)                     create=create_egg  ;;
+    *.deb|*.ipk)               create=create_deb  ;;  # Leave for now
+    *.udeb|*.ddeb)             create=create_deb  ;;  # Leave for now
+    *.egg)                     create=create_egg  ;;  # Leave for now
     *.iso|*.bin|*.raw)         create=create_iso  ;;
-    *.lha|*.lzh)               create=create_lha  ;;
+    *.lha|*.lzh)               create=create_lhz  ;;  # No tooling
     ## *.lz)                      create=create_lz  ;;
     ## *.gz)                      create=create_gz  ;;
     ## *.lz4)                     create=create_lz4  ;;
     ## *.xz)                      create=create_xz  ;;
     *.rar|*.r[0-9][0-9])       create=create_rar  ;;
-    *.rpm)                     create=create_rpm  ;;
-    *.whl)                     create=create_whl  ;;
-    *.7z)                      create=create_7z  ;;
-    *.zoo)                     create=create_zoo  ;;
+    *.cpio)                    create=create_cpio ;;
+    *.rpm)                     create=create_rpm  ;;  # Leave for now
+    *.whl)                     create=create_whl  ;;  # Leave for now
+    *.7z)                      create=create_7z   ;;
+    *.zoo)                     create=create_zoo  ;;  # No tooling
     *) echo "$SELF: ERROR: Unknown file type" >&2
        exit 1
        ;;
@@ -70,30 +71,124 @@ create_blah()
 
 create_7z()
 {
-  7z a -r "$@"
+  ## 7z a -r "$@"
+  local opts="-bd $([ $verbose -ge 1 ] && printf %s -bb1)"
+  set -o noglob
+
+  rm -f "$archive_filename"
+
+  # -bb1 shows names of files archived, prefixed with a plus and a space
+  # but are not shown if they are empty files
+  if [ $# -gt 0 ] ; then
+    [ $verbose -ge 2 ] && echo "* 7z a \"$archive_filename\" $@" $exclude_args
+    7z a $opts "$@" $exclude_args
+  else
+    [ $verbose -ge 2 ] && echo "* 7z a \"$archive_filename\" ." $exclude_args
+    7z a $opts "$archive_filename" . $exclude_args
+  fi |
+    sed -n 's/^+ //p'
+
+  set +f
 }
 
 
 create_tar()
 {
-  local tar_args
+  local tar_opts
+
+  case "$1" in
+    *.tar.br|tar.brotli)          tar_opts="--use-compress-program=brotli"  ;;
+    *.tar.bz2|*.tbz2|*.tbz)       tar_opts="--bzip2"  ;;
+    *.tar.gz|*.tgz|*.tdz)         tar_opts="--gzip"  ;;
+    *.tar.lzma)                   tar_opts="--lzma"  ;;
+    *.tar.lz|*.tar.lzip|*.tlz)    tar_opts="--lzip"  ;;
+    *.tar.lz4)                    tar_opts="--use-compress-program=lz4"  ;;
+    *.tar.lzo|tar.lzop)           tar_opts="--lzop"  ;;
+    *.tar.xz|*.txz)               tar_opts="--xz"  ;;
+    *.tar.zstd|*.tzst)            tar_opts="--zstd"  ;;
+    *.tar.Z)                      tar_opts=-Z ;;
+  esac
+  shift
 
   # in v1.34, -a / --auto-compress doesn't work.
+  ## if [ $verbose -ge 2 ] ; then
+  ##   echo tar c$([ $verbose -ge 1 ] && printf %s v) $tar_opts $exclude_args -f "$archive_filename" 
+  ## else
+
+  if [ $# -gt 0 ] ; then
+    tar c$([ $verbose -ge 1 ] && printf %s v) $tar_opts $exclude_args -f "$archive_filename" "$@"
+  else
+    tar c$([ $verbose -ge 1 ] && printf %s v) $tar_opts $exclude_args -f "$archive_filename" .
+  fi
 }
 
 
 create_zip()
 {
-  shift
-  rm -f "$archive_filename"
   set -o noglob
+
+  shift
+
+  rm -f "$archive_filename"
+
   if [ $# -gt 0 ] ; then
-    [ $verbose -ge 2 ] && echo "* zip -r \"$archive_filename\" $@" $exclude
-    zip -r "$archive_filename" "$@" $exclude
+    [ $verbose -ge 2 ] && echo "* zip -r \"$archive_filename\" $@" $exclude_args
+    zip -r "$archive_filename" "$@" $exclude_args
   else
-    [ $verbose -ge 2 ] && echo "* zip -r \"$archive_filename\" ." $exclude
-    zip -r "$archive_filename" . $exclude
+    [ $verbose -ge 2 ] && echo "* zip -r \"$archive_filename\" ." $exclude_args
+    zip -r "$archive_filename" . $exclude_args
   fi
+
+  set +f
+}
+
+
+create_arj()
+{
+  ## if [ -x "`which arj`" ]; then
+    rm -f "$archive_filename"
+    arj a -r "$@"
+  ## else
+  ##   create_7z "$@"
+  ## fi
+}
+
+
+create_rar()
+{
+  if [ -x "`which rar`" ]; then
+    rar a -r "$@"
+  else
+    create_7z "$@"
+  fi
+}
+
+
+create_cpio()
+{
+  local find_args arg file
+  set -o noglob
+
+  shift
+
+  if [ $# -gt 0 ] ; then
+    find_args="-name $arg"
+    shift
+    for arg ; do
+      find_args="$find_args -o -name $arg"
+    done
+  fi
+  for file in exclude_files ; do
+    find_args="$find_args ! -name $arg"
+  done
+
+  # cpio supports -L
+  # --quiet suppresses messages and is orthogonal to --verbose, which shows file details
+  find . ! -path . $find_args |
+    cpio --create $([ $verbose -ge 1 ] && printf %s --verbose) --quiet \
+         --file "$archive_filename"
+
+  set +f
 }
 
 
@@ -124,7 +219,6 @@ while [ x"$1" != x-- ] ; do
         shift
         ;;
     -o|--output)
-        echo "$SELF: ERROR: -d currently " >&2
         output_dir=$2
         shift
         ;;
@@ -133,7 +227,8 @@ while [ x"$1" != x-- ] ; do
         shift
         ;;
     -x|--exclude)
-        exclude="$exclude -x $2"
+        exclude_args="$exclude_args -x $2"
+        exclude_files="$exclude_files $2"
         shift
         ;;
     -1) echo "${SELF}: Warning: Blah blah blah feature unsupported" >&2 ;;
@@ -187,6 +282,10 @@ if [ "$mode" = pick ] ; then
     fi
   fi
 else
+  if [ -n "$output_dir" ] ; then
+    echo "$SELF: ERROR: -o only supported when using -d to choose archive name" >&2
+    exit 1
+  fi
   if [ -z "$1" ] ; then
     echo "$SELF: ERROR: archive filename missing" >&2
     exit 1
