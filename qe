@@ -61,7 +61,8 @@ determine_file_type()
   case "$1" in
     *.a)                       extension_glob=.a ; extract=extract_a ; list=list_a  ;;
     *.arj)                     extension_glob=.arj ; extract=extract_arj ; list=list_arj  ;;
-    *.tar|*.tgz|*.tbz|*.tbz2|*.txz|*.tdz|*.tlz|*.tzst)   extension_glob='.???' ; extract=extract_tar ; list=list_tar  ;;
+    *.tar|*.tgz|*.tbz|*.tbz2|*.txz|*.tdz|*.tlz)   extension_glob='.???' ; extract=extract_tar ; list=list_tar  ;;
+    *.tzst)                    extension_glob='.????' ; extract=extract_tar ; list=list_tar  ;;
     *.tar.*)                   extension_glob=.tar.\* ; extract=extract_tar ; list=list_tar  ;;
     *.zip)                     extension_glob=.zip ; extract=extract_zip ; list=list_zip  ;;
     *.jar|*.war|*.ear|*.xpi)   extension_glob='.???' ; extract=extract_zip ; list=list_zip  ;;
