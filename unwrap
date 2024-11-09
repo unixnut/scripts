@@ -1,16 +1,20 @@
-#! /usr/bin/python
+#! /usr/bin/python3
 # unwrap (Python script) -- removes soft line breaks
 #
-# Version:   1.0
+# Version:   1.1
 # Copyright: (c)2015 Alastair Irvine <alastair@plug.org.au>
-# Keywords:  qp text
+# Keywords:  qp, text, line wrapping
 # Licence:   This file is released under the GNU General Public License
 #
-'''Description:
-  
-Usage: 
+'''Description: Converts each paragraph in the input into a single line.
+
+Input consists of file(s) or stdin (the default if no command line arguments
+are present, or used instead of any filename given as "-") and its paragraphs
+are separated by a blank line i.e. two line breaks.  All indenting is removed.
+
+Usage: unwrap [-q] [<files>...]
 Options:
-  
+  -q    Decode Quoted Printable input before processing
 '''
 # Licence details:
 #     This program is free software; you can redistribute it and/or modify
@@ -30,7 +34,7 @@ Options:
 import sys
 import getopt
 import quopri
-import StringIO
+import io
 
 
 self="unwrap"
@@ -65,19 +69,19 @@ class Output(object):
 
 # *** FUNCTIONS ***
 def show_help(dest=sys.stdout):
-    print >> dest, __doc__,
+    print(__doc__, end='', file=dest)
 
 
 def report_error(*msg):
-    print >> sys.stderr, self + ": Error:", msg
+    print(self + ": Error:", msg, file=sys.stderr)
 
 
 def report_warning(*msg):
-    print >> sys.stderr, self + ": Warning:", msg
+    print(self + ": Warning:", msg, file=sys.stderr)
 
 
 def report_notice(*msg):
-    print >> sys.stderr, self + ": Notice:", msg
+    print(self + ": Notice:", msg, file=sys.stderr)
 
 
 def process_regular(f):
@@ -97,7 +101,7 @@ def process_regular(f):
 
 
 def process_quopri(f):
-    b = StringIO.StringIO()
+    b = io.StringIO()
     quopri.decode(f, b)
     b.seek(0)
     ## print len(b.getvalue())
@@ -113,7 +117,7 @@ if __name__ == '__main__':
     # -- option handling --
     try:
         optlist, args = getopt.getopt(sys.argv[1:], allowed_options, allowed_long_options)
-    except getopt.GetoptError, e:
+    except getopt.GetoptError as e:
         report_error(e)
         sys.exit(1)
 
@@ -138,15 +142,18 @@ if __name__ == '__main__':
 
 
     # == processing ==
-    if len(args) == 0 or args[1] == "-":
+    if len(args) == 0:
         if params["quopri"]:
-            print process_quopri(sys.stdin)
+            print(process_quopri(sys.stdin))
         else:
-            print process_regular(sys.stdin)
+            print(process_regular(sys.stdin))
     else:
         for filename in args:
-            f = open(filename)
-            if params["quopri"]:
-                print process_quopri(f)
+            if filename == "-":
+                f = sys.stdin
             else:
-                print process_regular(f)
+                f = open(filename)
+            if params["quopri"]:
+                print(process_quopri(f))
+            else:
+                print(process_regular(f))
