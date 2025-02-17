@@ -1,0 +1,9 @@
+#!/usr/bin/awk -f
+# colpercent (AWK script) -- Prepends a column showing the percentage of TOTAL for each line's value
+#
+# Usage: colpercent [ <file>... ] TOTAL=<n> [ COL=<n> ]
+#
+#   - COL (default 1) is the column to sum, with 1 being the first
+
+BEGIN { if (COL == 0) COL=1 }
+{ printf("% 5.1f\t%s\n", 100.0 * $(COL) / TOTAL, $0); }
