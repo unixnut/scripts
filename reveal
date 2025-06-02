@@ -1,0 +1,81 @@
+#! /bin/sh
+# reveal (Bourne shell script) -- Open a text/*html URL in a brower or anything else as a file
+#
+# Version: 1.0
+
+# *** FUNCTIONS ***
+get_mimetype_wget()
+{
+  local exit_code output
+
+  # wget headers and informational/error output goes to stderr
+  if output=$(wget -nv --method=HEAD --server-response -O - "$1" 2>&1)
+  then
+    echo "$output" | sed -n 's/^  Content-Type: //ip'
+  else
+    exit_code=$?
+    # wget headers are indented, so trim them out (if any) and leave the error message
+    echo "$output" | sed '/^  /d' >&2
+    return $exit_code
+  fi
+}
+
+
+get_mimetype_curl()
+{
+  local output
+
+  if output=$(curl -sS --fail --head "$1")
+  then
+    echo "$output" | sed -n 's/^Content-Type: //ip'
+  else
+    return $?
+  fi
+}
+
+
+## get_headers()
+
+
+open_in_browser()
+{
+  case "$(type sensible-browser)" in
+    *" not found") x-www-browser "$1" ;;
+    *)             sensible-browser "$1" ;;
+  esac
+}
+
+
+open_file()
+{
+  case "$(type xdg-open)" in
+    *" not found") gio open "$1" ;;
+    *)             xdg-open "$1" ;;
+  esac
+}
+
+
+open_url()
+{
+  local mimetype
+
+  # Get the URL's MIME type in order to decide how to open it (browser or download)
+  case "$(type curl)" in
+    *" not found") mimetype=$(get_mimetype_wget "$1") ;;
+    *)             mimetype=$(get_mimetype_curl "$1") ;;
+  esac
+
+  case "$mimetype" in
+    text/*html) open_in_browser "$1" ;;
+    *)          open_file "$1" ;;
+  esac
+}
+
+
+
+# *** MAINLINE ***
+set -e
+case "$1" in
+  https:*|http:*|ftp:*|ftps:*) open_url "$1" ;;
+  *)                           open_file "$1" ;;
+esac
