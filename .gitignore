@@ -9,6 +9,17 @@
 Classes/
 RCS/
 i386-linux/
+i686-linux/
+x86_64-Linux/
+arm32-Linux/
+aarch64-Linux/
+arm64-Linux/
+i386-FreeBSD/
+i686-FreeBSD/
+x86_64-FreeBSD/
+arm32-FreeBSD/
+aarch64-FreeBSD/
+arm64-FreeBSD/
 old/
 
 # old
