@@ -1,0 +1,6 @@
+#! /bin/sh
+# cpls (Bourne shell script) -- List directories, ignoring __pycache__, with a pager
+
+find "$@" \( -name __pycache__ -prune \) -o -type d -print0 |
+  xargs -0 ls -FC --group-directories-first --color=always |
+  less -SR

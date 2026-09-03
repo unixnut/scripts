@@ -1,0 +1,29 @@
+#! /bin/sh
+# probe (Bourne shell script) -- Run static checkers against source code
+#
+# Currently supports Python
+
+# == Vim quickfix ==
+# Ruff:
+#     :setlocal errorformat=%f:%l:%c:\ %m,%f:%l:\ %m,%f:%l:%c\ -\ %m,%f:
+#
+# pylint:
+#     :setlocal errorformat=%A%f:%l:%c:%t:\ %m,%A%f:%l:\ %m,%A%f:(%l):\ %m,%-Z%p^%.%#,%-G%.%#
+#
+# mypy:
+#     :setlocal errorformat=%f:%l:%c:\ %t%*[^:]:\ %m
+#
+# combined:
+#     :setlocal errorformat=%f:%l:%c\ %t%n:\ %m,%f:%l:%c:\ %t%*[^:\ ]:\ %m,%f:%l:%c:%t:\ %m,%f:%l:%c:\ %m,%f:%l:\ %m
+#
+# didn't work: ...%t%[a-z]%#\ %n:...  (picks up category and error number separately; suspect error number has to be numeric)
+
+{
+  ## .venv/bin/pylint --output-format=text --msg-template="{path}:{line}:{column}:{C}: [{symbol}] {msg}" --reports=no "$@"
+  .venv/bin/pylint --reports=no --score=no --output-format=text \
+    --msg-template="{path}:{line}:{column} {msg_id}: (pylint) {msg}  [{symbol}]" "$@"
+  ###    --output-format=parseable
+  .venv/bin/ruff check --output-format=concise --quiet "$@"
+  .venv/bin/mypy --ignore-missing-imports --show-column-numbers --no-error-summary "$@"  ## --strict
+} |
+  sort --field-separator=: -k 1,1 -k 2,2n
