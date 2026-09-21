@@ -1,4 +1,6 @@
 #! /bin/sh
 # myip (Bourne shell script) -- Returns the external IP address of the LAN
 
+# nslookup myip.opendns.com resolver1.opendns.com
+
 dig -4 +short myip.opendns.com a @resolver1.opendns.com

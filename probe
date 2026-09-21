@@ -2,6 +2,22 @@
 # probe (Bourne shell script) -- Run static checkers against source code
 #
 # Currently supports Python
+#
+# mypy Strict mode enables the following flags:
+#    --disallow-any-generics
+#    --disallow-subclassing-any
+#    --disallow-untyped-calls
+#    --disallow-untyped-defs
+#    --disallow-incomplete-defs *
+#    --check-untyped-defs
+#    --disallow-untyped-decorators
+#    --warn-redundant-casts
+#    --warn-unused-ignores
+#    --warn-return-any
+#    --no-implicit-reexport
+#    --strict-equality
+#    --extra-checks
+#  * essential
 
 # == Vim quickfix ==
 # Ruff:
@@ -24,6 +40,7 @@
     --msg-template="{path}:{line}:{column} {msg_id}: (pylint) {msg}  [{symbol}]" "$@"
   ###    --output-format=parseable
   .venv/bin/ruff check --output-format=concise --quiet "$@"
-  .venv/bin/mypy --ignore-missing-imports --show-column-numbers --no-error-summary "$@"  ## --strict
+  .venv/bin/mypy --strict --ignore-missing-imports \
+    --show-column-numbers --hide-error-context --no-error-summary "$@"
 } |
   sort --field-separator=: -k 1,1 -k 2,2n
